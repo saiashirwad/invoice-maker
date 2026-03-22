@@ -18,7 +18,13 @@ import {
 } from '@/components/ui/tooltip'
 import { toast } from 'sonner'
 import { requireUser } from '@/lib/route-auth'
-import { saveInvoice, editInvoice, getUserDefaults, listCategoryNames, getInvoice } from '@/lib/invoice-fns'
+import {
+  saveInvoice,
+  editInvoice,
+  getUserDefaults,
+  listCategoryNames,
+  getInvoice,
+} from '@/lib/invoice-fns'
 import InvoiceForm from '@/components/invoice/InvoiceForm'
 import InvoicePreview from '@/components/invoice/InvoicePreview'
 import ThemeToggle from '@/components/ThemeToggle'
@@ -39,7 +45,10 @@ export const Route = createFileRoute('/invoices/new')({
     duplicate: (search.duplicate as string) || undefined,
     edit: (search.edit as string) || undefined,
   }),
-  loaderDeps: ({ search }) => ({ duplicate: search.duplicate, edit: search.edit }),
+  loaderDeps: ({ search }) => ({
+    duplicate: search.duplicate,
+    edit: search.edit,
+  }),
   loader: async ({ deps }) => {
     const [defaults, categories] = await Promise.all([
       getUserDefaults(),
@@ -153,7 +162,10 @@ function NewInvoicePage() {
           setSaveState('saved')
           toast.success('Invoice updated')
           setTimeout(() => {
-            void navigate({ to: '/invoices/$id', params: { id: editInvoiceId } })
+            void navigate({
+              to: '/invoices/$id',
+              params: { id: editInvoiceId },
+            })
           }, 600)
         } else {
           const result = await saveInvoice({ data: value })
@@ -194,14 +206,18 @@ function NewInvoicePage() {
   const [showMobilePreview, setShowMobilePreview] = useState(false)
   const [formPercent, setFormPercent] = useState(50)
   const [isDragging, setIsDragging] = useState(false)
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle')
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>(
+    'idle',
+  )
   const containerRef = useRef<HTMLDivElement>(null)
   const isDirty = useStore(form.store, (s) => s.isDirty)
 
   // Unsaved changes warning
   useEffect(() => {
     if (!isDirty) return
-    const handler = (e: BeforeUnloadEvent) => { e.preventDefault() }
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+    }
     window.addEventListener('beforeunload', handler)
     return () => window.removeEventListener('beforeunload', handler)
   }, [isDirty])
@@ -323,7 +339,9 @@ function NewInvoicePage() {
                   onClick={() => setShowPreview((v) => !v)}
                   className="hidden h-8 w-8 items-center justify-center rounded-full border border-[var(--border)] text-[var(--muted-foreground)] transition hover:bg-[var(--accent)] hover:text-[var(--foreground)] lg:flex"
                   aria-label={
-                    showPreview ? 'Hide invoice preview' : 'Show invoice preview'
+                    showPreview
+                      ? 'Hide invoice preview'
+                      : 'Show invoice preview'
                   }
                 >
                   {showPreview ? (
@@ -353,7 +371,10 @@ function NewInvoicePage() {
               </TooltipContent>
             </Tooltip>
             <ThemeToggle />
-            <span className="mx-1.5 h-5 w-px bg-[var(--border)]" aria-hidden="true" />
+            <span
+              className="mx-1.5 h-5 w-px bg-[var(--border)]"
+              aria-hidden="true"
+            />
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
@@ -366,7 +387,13 @@ function NewInvoicePage() {
                 </button>
               </TooltipTrigger>
               <TooltipContent side="bottom" sideOffset={6}>
-                Export as PDF <kbd className="ml-1 text-[10px] opacity-60">{typeof navigator !== 'undefined' && /Mac/.test(navigator.userAgent) ? '\u2318P' : 'Ctrl+P'}</kbd>
+                Export as PDF{' '}
+                <kbd className="ml-1 text-[10px] opacity-60">
+                  {typeof navigator !== 'undefined' &&
+                  /Mac/.test(navigator.userAgent)
+                    ? '\u2318P'
+                    : 'Ctrl+P'}
+                </kbd>
               </TooltipContent>
             </Tooltip>
             <button
@@ -380,7 +407,13 @@ function NewInvoicePage() {
               ) : saveState === 'saved' ? (
                 <Check size={13} />
               ) : null}
-              {isSubmitting ? 'Saving...' : saveState === 'saved' ? 'Saved' : editInvoiceId ? 'Update Invoice' : 'Save Invoice'}
+              {isSubmitting
+                ? 'Saving...'
+                : saveState === 'saved'
+                  ? 'Saved'
+                  : editInvoiceId
+                    ? 'Update Invoice'
+                    : 'Save Invoice'}
             </button>
           </div>
         </div>

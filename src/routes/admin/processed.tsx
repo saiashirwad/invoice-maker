@@ -73,14 +73,10 @@ export const Route = createFileRoute('/admin/processed')({
     status: (statusOptions.includes(search.status as StatusFilter)
       ? search.status
       : 'all') as StatusFilter,
-    userId: (typeof search.userId === 'string' ? search.userId : ''),
-    category: (typeof search.category === 'string'
-      ? search.category
-      : ''),
-    dateFrom: (typeof search.dateFrom === 'string'
-      ? search.dateFrom
-      : ''),
-    dateTo: (typeof search.dateTo === 'string' ? search.dateTo : ''),
+    userId: typeof search.userId === 'string' ? search.userId : '',
+    category: typeof search.category === 'string' ? search.category : '',
+    dateFrom: typeof search.dateFrom === 'string' ? search.dateFrom : '',
+    dateTo: typeof search.dateTo === 'string' ? search.dateTo : '',
     sortBy: (sortByOptions.includes(search.sortBy as SortBy)
       ? search.sortBy
       : 'date') as SortBy,
@@ -853,34 +849,119 @@ function ProcessedPage() {
 
   return (
     <AdminLayout processedCount={counts.all}>
-        {/* Filter bar */}
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          <StatusFilterPill
-            value={search.status}
-            counts={counts}
-            onChange={(status) => updateSearch({ status })}
-          />
-          <UserFilterPill
-            value={search.userId}
-            contractors={contractors}
-            onChange={(userId) => updateSearch({ userId })}
-          />
-          <CategoryFilterPill
-            value={search.category}
-            categories={categories}
-            onChange={(category) => updateSearch({ category })}
-          />
-          <DateFilterPill
-            dateFrom={search.dateFrom}
-            dateTo={search.dateTo}
-            onChange={(dateFrom, dateTo) => updateSearch({ dateFrom, dateTo })}
-          />
-          <SortPill
-            sortBy={search.sortBy}
-            sortDir={search.sortDir}
-            onChange={(sortBy, sortDir) => updateSearch({ sortBy, sortDir })}
-          />
-          {showClearAll && (
+      {/* Filter bar */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <StatusFilterPill
+          value={search.status}
+          counts={counts}
+          onChange={(status) => updateSearch({ status })}
+        />
+        <UserFilterPill
+          value={search.userId}
+          contractors={contractors}
+          onChange={(userId) => updateSearch({ userId })}
+        />
+        <CategoryFilterPill
+          value={search.category}
+          categories={categories}
+          onChange={(category) => updateSearch({ category })}
+        />
+        <DateFilterPill
+          dateFrom={search.dateFrom}
+          dateTo={search.dateTo}
+          onChange={(dateFrom, dateTo) => updateSearch({ dateFrom, dateTo })}
+        />
+        <SortPill
+          sortBy={search.sortBy}
+          sortDir={search.sortDir}
+          onChange={(sortBy, sortDir) => updateSearch({ sortBy, sortDir })}
+        />
+        {showClearAll && (
+          <button
+            onClick={() =>
+              updateSearch({
+                status: 'all',
+                userId: '',
+                category: '',
+                dateFrom: '',
+                dateTo: '',
+                sortBy: 'date',
+                sortDir: 'desc',
+              })
+            }
+            className="text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+          >
+            Clear all
+          </button>
+        )}
+      </div>
+
+      {/* Result summary */}
+      {items.length > 0 && (
+        <div className="mb-5 flex items-baseline justify-between text-xs text-[var(--muted-foreground)]">
+          <span>
+            {items.length}
+            {hasMore ? '+' : ''} invoice{items.length !== 1 ? 's' : ''}
+            {filteredByUser && filteredUserName && <> by {filteredUserName}</>}
+          </span>
+          <span className="font-medium tabular-nums text-[var(--foreground)]">
+            {formatCurrency(totalAmount / 100, primaryCurrency)}
+          </span>
+        </div>
+      )}
+
+      {/* Invoice list */}
+      {items.length > 0 ? (
+        <div>
+          <div className="divide-y divide-[var(--border)]">
+            {items.map((inv) => (
+              <button
+                key={inv.id}
+                onClick={() => setSelected(inv)}
+                className={invoiceRowClass}
+              >
+                <InvoiceRow
+                  invoiceNumber={inv.invoiceNumber}
+                  status={inv.status}
+                  date={inv.invoiceDate}
+                  entityName={
+                    filteredByUser
+                      ? getBillToName(inv.billTo)
+                      : inv.userName
+                        ? `by ${inv.userName}`
+                        : getBillToName(inv.billTo)
+                  }
+                  entityBadge={inv.entityName ?? undefined}
+                  amount={formatCurrency(
+                    inv.grandTotalCents / 100,
+                    inv.currencyCode,
+                  )}
+                />
+              </button>
+            ))}
+          </div>
+
+          {hasMore && (
+            <button
+              onClick={() => void handleLoadMore()}
+              disabled={loadingMore}
+              className="mt-4 flex w-full items-center justify-center gap-1.5 py-3 text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] disabled:opacity-50"
+            >
+              {loadingMore ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <ChevronDown size={14} />
+              )}
+              {loadingMore ? 'Loading...' : 'Load more'}
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <p className="text-sm text-[var(--muted-foreground)]">
+            No invoices match your filters
+          </p>
+          {activeFilters > 0 && (
             <button
               onClick={() =>
                 updateSearch({
@@ -889,102 +970,15 @@ function ProcessedPage() {
                   category: '',
                   dateFrom: '',
                   dateTo: '',
-                  sortBy: 'date',
-                  sortDir: 'desc',
                 })
               }
-              className="text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+              className="mt-2 text-xs text-[var(--muted-foreground)] underline underline-offset-2 hover:text-[var(--foreground)]"
             >
-              Clear all
+              Clear filters
             </button>
           )}
         </div>
-
-        {/* Result summary */}
-        {items.length > 0 && (
-          <div className="mb-5 flex items-baseline justify-between text-xs text-[var(--muted-foreground)]">
-            <span>
-              {items.length}
-              {hasMore ? '+' : ''} invoice{items.length !== 1 ? 's' : ''}
-              {filteredByUser && filteredUserName && (
-                <> by {filteredUserName}</>
-              )}
-            </span>
-            <span className="font-medium tabular-nums text-[var(--foreground)]">
-              {formatCurrency(totalAmount / 100, primaryCurrency)}
-            </span>
-          </div>
-        )}
-
-        {/* Invoice list */}
-        {items.length > 0 ? (
-          <div>
-            <div className="divide-y divide-[var(--border)]">
-              {items.map((inv) => (
-                <button
-                  key={inv.id}
-                  onClick={() => setSelected(inv)}
-                  className={invoiceRowClass}
-                >
-                  <InvoiceRow
-                    invoiceNumber={inv.invoiceNumber}
-                    status={inv.status}
-                    date={inv.invoiceDate}
-                    entityName={
-                      filteredByUser
-                        ? getBillToName(inv.billTo)
-                        : inv.userName
-                          ? `by ${inv.userName}`
-                          : getBillToName(inv.billTo)
-                    }
-                    entityBadge={inv.entityName ?? undefined}
-                    amount={formatCurrency(
-                      inv.grandTotalCents / 100,
-                      inv.currencyCode,
-                    )}
-                  />
-                </button>
-              ))}
-            </div>
-
-            {hasMore && (
-              <button
-                onClick={() => void handleLoadMore()}
-                disabled={loadingMore}
-                className="mt-4 flex w-full items-center justify-center gap-1.5 py-3 text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] disabled:opacity-50"
-              >
-                {loadingMore ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : (
-                  <ChevronDown size={14} />
-                )}
-                {loadingMore ? 'Loading...' : 'Load more'}
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <p className="text-sm text-[var(--muted-foreground)]">
-              No invoices match your filters
-            </p>
-            {activeFilters > 0 && (
-              <button
-                onClick={() =>
-                  updateSearch({
-                    status: 'all',
-                    userId: '',
-                    category: '',
-                    dateFrom: '',
-                    dateTo: '',
-                  })
-                }
-                className="mt-2 text-xs text-[var(--muted-foreground)] underline underline-offset-2 hover:text-[var(--foreground)]"
-              >
-                Clear filters
-              </button>
-            )}
-          </div>
-        )}
+      )}
 
       <DetailDialog
         inv={selected}

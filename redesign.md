@@ -5,6 +5,7 @@ Companion design spec: `design.md`
 This file turns the admin audit into an implementation checklist. The goal is not a visual refresh. The goal is to rebuild the admin into a calm finance operations tool with clearer workflow, stronger hierarchy, and better entity separation.
 
 Notes for this checklist:
+
 - Use critique context to guide design decisions, not as a requirement to add explanatory UI copy.
 - Optimize for calm authority and decision confidence in a high-trust financial workflow.
 - Benchmark against operational tools like Stripe Dashboard, Linear, and Mercury for clarity, density, and consistency.
@@ -19,49 +20,74 @@ Notes for this checklist:
 
 ## P0 Foundation
 
-### Cleanup
-
-- [ ] Remove visible dev-only chrome from the product surface.
-      Target: `src/routes/__root.tsx`, `src/components/DevRoleSwitcher.tsx`
-- [ ] Verify admin routes render without TanStack devtools panels or role-switcher overlap at desktop and mobile widths.
-- [ ] Confirm the redesign does not introduce new fake totals for mixed currencies.
-
 ### Shared Shell
 
-- [ ] Replace the current thin admin frame with a stronger shell.
+- [x] Replace the current thin admin frame with a stronger shell.
       Target: `src/components/AdminLayout.tsx`
-- [ ] Add a compact route context band with route label, operational counts, active state, and room for primary controls.
-- [ ] Widen and quiet the left rail so navigation, page grouping, and entity legend have deliberate space.
-- [ ] Establish a consistent content canvas that can support split panes, wide ledgers, and summary rows.
-- [ ] Add a right-side utility zone in the context band for date context, sync state, or future global filters.
+- [x] Add a compact route context band with route label, operational counts, active state, and room for primary controls.
+- [x] Widen and quiet the left rail so navigation, page grouping, and entity legend have deliberate space.
+- [x] Establish a consistent content canvas that can support split panes, wide ledgers, and summary rows.
+- [x] Add a right-side utility zone in the context band for date context, sync state, or future global filters.
 
 ### Shared Design System
 
-- [ ] Create or refactor toward shared admin primitives:
-  - `AdminShell`
-  - `AdminContextBand`
-  - `AdminSummaryCard`
-  - `AdminToolbar`
-  - `EntityChip`
-  - `StatusChip`
-  - `MetricCell`
-  - `LedgerTable`
-  - `InspectorDrawer`
-  - `FilterChip`
-  - `SectionHeading`
-- [ ] Standardize typography for operational data.
-      Use monospace treatment for invoice IDs, prefixes, and currency amounts, and enable tabular numerals for financial scanning.
-- [ ] Standardize entity, status, and caution color usage.
-- [ ] Define one badge and tag vocabulary across admin routes.
-      Decide when to use pills, dots, outlined chips, and plain text statuses, then apply that rule everywhere.
-- [ ] Define consistent row states for default, hover, selected, focused, caution, and completed.
-- [ ] Remove contrast inversions that create a second reading context.
-      Avoid near-black summary cards unless the entire page adopts that tonal system deliberately.
-- [ ] Standardize button hierarchy so filled, outlined, and ghost treatments map consistently to primary, secondary, and tertiary actions.
-- [ ] Standardize filter controls across admin pages so dropdowns, chips, segmented controls, and clear states feel like one system.
-- [ ] Define destructive action tiers across admin flows.
-      Low-risk actions can use single-click plus undo, medium-risk actions need consequence-aware confirmation, and high-risk actions need explicit confirmation.
-- [ ] Replace generic centered modals with side sheets or inspector drawers where the task is review or management, not confirmation.
+- [x] Standardize shared admin primitives and ownership:
+  - Source of truth is this section plus `design.md`.
+  - Define all components in/under `src/components/admin/` and reuse them via route files, do not create one-off replacements in routes.
+- [x] Create or refactor the following primitives and their responsibilities:
+  - `AdminShell` (layout shell): 240px rail, contextual breadcrumbs, page max width controls, route-level sticky context band, right utility cluster.
+  - `AdminContextBand` (top working header): route label, entity/tally pills, sync/refresh state, action slot, optional date scope label.
+  - `AdminSummaryCard` (metric surface): consistent padding (`space-6`), non-inverted tonal treatment, title + primary/secondary value lines, optional trend/caveat footer.
+  - `AdminToolbar` (control row): search + primary filters + segmented controls + actions in one 52px band, no fragmented UI islands.
+  - `SectionHeading` (section title group): left title, optional helper line, optional action and secondary action.
+  - `EntityChip` (SV/LP semantic): outlined by default, semantic text/outline only, no status semantics.
+  - `StatusChip` (lifecycle status): dot + label with semantic background/text tokens from `design.md`.
+  - `MetricCell` (financial cell): monospace, right-aligned amounts, tabular numerals, explicit currency label.
+  - `LedgerTable` (ledger shell): sticky header, fixed column alignments, row action column not visually dominant by default.
+  - `InspectorDrawer` (persistent detail surface): right-side drawer pattern for review/management context.
+  - `FilterChip` (active filter token): text + remove action, subtle active style, can be grouped in filter bar.
+- [x] Typography and numeric treatment:
+  - Use `JetBrains Mono` for invoice IDs, prefixes, invoice amounts, and row IDs.
+  - Apply `font-variant-numeric: tabular-nums` in all monetary/date-dense cells.
+  - Keep dates and names in proportional font (`Inter`) for quick parsing.
+- [x] Standardize color and meaning tokens:
+  - Entity chips use `Role Tokens` values from `design.md`.
+  - Status is only represented through `StatusChip`, never plain icon-only status text.
+  - Caution states must use amber semantics only (`outstanding`, `aging`, `anomaly`) and never borrow approval/paid green.
+- [x] Badge/tag vocabulary and consistent use:
+  - Use pills for entity, role, category, and counts.
+  - Use dot+label status chips only for lifecycle states.
+  - Use outlined chips for medium-importance metadata.
+  - Use plain text when semantic context is inherited from surrounding rows (avoid competing status encoding).
+  - Never mix pill/dot/plain text for the same semantic class across routes.
+- [x] Row state matrix for list and table surfaces:
+  - Default: neutral surface, muted border
+  - Hover: `interactive-hover-bg`
+  - Selected: `interactive-active-bg` + active marker
+  - Focus: `interactive-focus-ring`
+  - Caution: warning background/text pair, no icon-only warning
+  - Completed: de-emphasized text and icon tone, no status ambiguity
+- [x] Contrast and surfaces:
+  - Keep cards/drawers on light surfaces (`bg-surface`/`bg-surface-sunken`) with restrained borders.
+  - Do not introduce near-black/near-white inversion except in dedicated contrast modules used across a full route.
+  - If emphasis is needed, use spacing, type weight, and accent tokens before tonal inversion.
+- [x] Action hierarchy:
+  - One filled/primary control per working region.
+  - Secondary actions are outlined; tertiary actions are ghost/text.
+  - Destructive actions are red (`button-danger-bg`) and visually separated from routine controls.
+  - Never use equal visual weight for primary and destructive actions.
+- [x] Filter system standardization:
+  - One toolbar pattern for all admin list pages with dropdowns/chips/segments.
+  - Active filters render as chips, grouped below the toolbar.
+  - `Clear all` is visible from route context when >=2 filters are active.
+  - Filter state is URL-serializable and route-shareable.
+- [x] Destructive action tiers:
+  - Low risk: single action + optional undo.
+  - Medium risk: explicit confirmation with consequence text.
+  - High risk: explicit confirmation + hard-to-miss state transition (e.g., locked, canceled, or resolved banner).
+- [x] Detail-flow rule:
+  - Any review/management flow that should keep list context open uses `InspectorDrawer` (right-side).
+  - Centered modals are reserved for confirmations and short low-context forms only.
 
 ## P1 Review Queue
 

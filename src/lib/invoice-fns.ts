@@ -18,8 +18,7 @@ import { getDb } from './db-middleware'
 import { getServerSession } from './auth'
 import { invoice, lineItem, invoiceNumberSequence } from '#/db/schema/invoice'
 import { category as categoryTable } from '#/db/schema/category'
-import { entity } from '#/db/schema/entity'
-import { userProfile } from '#/db/schema/entity'
+import { entity, userProfile  } from '#/db/schema/entity'
 import { user } from '#/db/schema/auth'
 import { auditLog } from '#/db/schema/audit'
 import {
@@ -181,9 +180,7 @@ export const editInvoice = createServerFn({ method: 'POST' }).handler(
         serviceDate: parsed.serviceDate
           ? new Date(parsed.serviceDate + 'T00:00:00')
           : null,
-        dueDate: parsed.dueDate
-          ? new Date(parsed.dueDate + 'T00:00:00')
-          : null,
+        dueDate: parsed.dueDate ? new Date(parsed.dueDate + 'T00:00:00') : null,
         billTo: parsed.billTo,
         clientTaxId: parsed.clientTaxId || null,
         companyDetails: parsed.companyDetails,
@@ -961,7 +958,11 @@ export const listAccountantInvoices = createServerFn({
 // ─── Mark Invoice Paid (approved → paid, accountant only) ───────────
 
 export const markPaid = createServerFn({ method: 'POST' }).handler(
-  async ({ data }: { data: { id: string; paymentMethod?: string; paymentReference?: string } }) => {
+  async ({
+    data,
+  }: {
+    data: { id: string; paymentMethod?: string; paymentReference?: string }
+  }) => {
     const session = await getServerSession(getRequest())
     if (!session?.user) throw new Error('Unauthorized')
 
@@ -1246,11 +1247,7 @@ export const updateUser = createServerFn({ method: 'POST' }).handler(
 // ─── Reporting Data (admin) ──────────────────────────────────────────
 
 export const getReportingData = createServerFn({ method: 'GET' }).handler(
-  async ({
-    data,
-  }: {
-    data: { dateFrom?: string; dateTo?: string }
-  }) => {
+  async ({ data }: { data: { dateFrom?: string; dateTo?: string } }) => {
     const session = await getServerSession(getRequest())
     if (!session?.user) throw new Error('Unauthorized')
 
@@ -1259,9 +1256,7 @@ export const getReportingData = createServerFn({ method: 'GET' }).handler(
 
     const db = getDb()
 
-    const conditions = [
-      inArray(invoice.status, ['approved', 'paid']),
-    ]
+    const conditions = [inArray(invoice.status, ['approved', 'paid'])]
     if (data.dateFrom) {
       conditions.push(
         gte(invoice.invoiceDate, new Date(data.dateFrom + 'T00:00:00')),
@@ -1291,7 +1286,9 @@ export const getReportingData = createServerFn({ method: 'GET' }).handler(
       .orderBy(asc(invoice.invoiceDate))
 
     // Entities for labeling
-    const entities = await db.select({ id: entity.id, name: entity.name }).from(entity)
+    const entities = await db
+      .select({ id: entity.id, name: entity.name })
+      .from(entity)
 
     return { invoices: rows, entities }
   },

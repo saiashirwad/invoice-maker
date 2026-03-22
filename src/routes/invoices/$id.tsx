@@ -190,10 +190,7 @@ function InvoiceDetailPage() {
             {canSubmit && (
               <>
                 <Button size="sm" variant="outline" asChild>
-                  <Link
-                    to="/invoices/new"
-                    search={{ edit: invoice.id }}
-                  >
+                  <Link to="/invoices/new" search={{ edit: invoice.id }}>
                     <Pencil size={14} className="mr-1.5" />
                     Edit
                   </Link>

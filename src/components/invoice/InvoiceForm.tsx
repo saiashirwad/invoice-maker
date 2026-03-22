@@ -23,7 +23,10 @@ const inputClass =
 const multilineInputClass =
   'focus-emerald-soft min-h-[112px] flex-1 py-3 leading-[1.7] font-normal [field-sizing:content]'
 
-export default function InvoiceForm({ form, categories = [] }: InvoiceFormProps) {
+export default function InvoiceForm({
+  form,
+  categories = [],
+}: InvoiceFormProps) {
   const currency = useStore(form.store, (s: any) => s.values.currency)
   const items = useStore(form.store, (s: any) => s.values.items)
   const taxPercent = useStore(form.store, (s: any) => s.values.taxPercent)
@@ -39,7 +42,10 @@ export default function InvoiceForm({ form, categories = [] }: InvoiceFormProps)
   )
 
   useEffect(() => {
-    if (prevTotalRef.current !== null && prevTotalRef.current !== calculations.total) {
+    if (
+      prevTotalRef.current !== null &&
+      prevTotalRef.current !== calculations.total
+    ) {
       setTotalFlash(true)
       const t = setTimeout(() => setTotalFlash(false), 600)
       return () => clearTimeout(t)
@@ -47,16 +53,13 @@ export default function InvoiceForm({ form, categories = [] }: InvoiceFormProps)
     prevTotalRef.current = calculations.total
   }, [calculations.total])
 
-  const handleDeleteItem = useCallback(
-    (itemsField: any, i: number) => {
-      setDeletingIndex(i)
-      setTimeout(() => {
-        itemsField.removeValue(i)
-        setDeletingIndex(null)
-      }, 150)
-    },
-    [],
-  )
+  const handleDeleteItem = useCallback((itemsField: any, i: number) => {
+    setDeletingIndex(i)
+    setTimeout(() => {
+      itemsField.removeValue(i)
+      setDeletingIndex(null)
+    }, 150)
+  }, [])
 
   return (
     <div className="sm:mx-8">
@@ -476,10 +479,12 @@ export default function InvoiceForm({ form, categories = [] }: InvoiceFormProps)
                 <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-[var(--foreground)]">
                   Total
                 </span>
-                <span className={cn(
-                  'text-[22px] font-semibold tracking-[-0.02em] tabular-nums text-[var(--foreground)] px-1',
-                  totalFlash && 'total-flash',
-                )}>
+                <span
+                  className={cn(
+                    'text-[22px] font-semibold tracking-[-0.02em] tabular-nums text-[var(--foreground)] px-1',
+                    totalFlash && 'total-flash',
+                  )}
+                >
                   {formatCurrency(calculations.total, currency)}
                 </span>
               </div>

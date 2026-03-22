@@ -11,7 +11,9 @@ const VALID_RANGES = ['all', '1m', '3m', '6m', '12m'] as const
 export const Route = createFileRoute('/admin/reporting')({
   beforeLoad: requireAdmin,
   validateSearch: (search: Record<string, unknown>) => ({
-    range: VALID_RANGES.includes(search.range as string as (typeof VALID_RANGES)[number])
+    range: VALID_RANGES.includes(
+      search.range as string as (typeof VALID_RANGES)[number],
+    )
       ? (search.range as string)
       : 'all',
   }),
@@ -92,9 +94,7 @@ function CurrencyBreakdown({
             'mt-0.5 text-xs tabular-nums text-[var(--muted-foreground)]'
           }
         >
-          {rest
-            .map((c) => formatCurrency(c.cents / 100, c.code))
-            .join(' + ')}
+          {rest.map((c) => formatCurrency(c.cents / 100, c.code)).join(' + ')}
         </div>
       )}
     </div>
@@ -150,7 +150,13 @@ function BarRow({
 
 // ─── Trend Indicator ─────────────────────────────────────────────────
 
-function TrendBadge({ current, previous }: { current: number; previous: number }) {
+function TrendBadge({
+  current,
+  previous,
+}: {
+  current: number
+  previous: number
+}) {
   if (previous === 0) return null
   const pctChange = Math.round(((current - previous) / previous) * 100)
   if (pctChange === 0) return null
@@ -200,7 +206,12 @@ function ReportingPage() {
   const byCurrency = useMemo(() => {
     const map = new Map<
       string,
-      { totalCents: number; count: number; paidCents: number; paidCount: number }
+      {
+        totalCents: number
+        count: number
+        paidCents: number
+        paidCount: number
+      }
     >()
     for (const inv of filtered) {
       const curr = inv.currencyCode
@@ -301,8 +312,7 @@ function ReportingPage() {
     >()
     for (const inv of filtered) {
       const eName = entityMap.get(inv.entityId) ?? inv.entityId
-      if (!map.has(eName))
-        map.set(eName, { currencies: new Map(), count: 0 })
+      if (!map.has(eName)) map.set(eName, { currencies: new Map(), count: 0 })
       const entry = map.get(eName)!
       entry.count += 1
       entry.currencies.set(
@@ -319,10 +329,7 @@ function ReportingPage() {
     }))
   }, [filtered, entityMap])
 
-  const maxCategoryCents = Math.max(
-    ...byCategory.map((c) => c.primaryCents),
-    1,
-  )
+  const maxCategoryCents = Math.max(...byCategory.map((c) => c.primaryCents), 1)
   const maxMonthlyCents = Math.max(...monthly.map((m) => m.primaryCents), 1)
 
   return (
@@ -435,9 +442,7 @@ function ReportingPage() {
                       {rest.length > 0 && (
                         <div className="mt-0.5 text-xs tabular-nums text-[var(--muted-foreground)]">
                           {rest
-                            .map((c) =>
-                              formatCurrency(c.cents / 100, c.code),
-                            )
+                            .map((c) => formatCurrency(c.cents / 100, c.code))
                             .join(' + ')}
                         </div>
                       )}
@@ -483,7 +488,10 @@ function ReportingPage() {
                 {monthly.map((m, i) => {
                   const prev = i > 0 ? monthly[i - 1].primaryCents : 0
                   return (
-                    <div key={m.month} className="flex items-center gap-4 py-1.5">
+                    <div
+                      key={m.month}
+                      className="flex items-center gap-4 py-1.5"
+                    >
                       <div className="w-28 shrink-0 text-right text-[13px] text-[var(--muted-foreground)]">
                         {formatMonth(m.month + '-01')}
                       </div>
@@ -517,9 +525,7 @@ function ReportingPage() {
                             {m.currencies
                               .sort((a, b) => b.cents - a.cents)
                               .slice(1)
-                              .map((c) =>
-                                formatCurrency(c.cents / 100, c.code),
-                              )
+                              .map((c) => formatCurrency(c.cents / 100, c.code))
                               .join(', ')}
                           </div>
                         )}

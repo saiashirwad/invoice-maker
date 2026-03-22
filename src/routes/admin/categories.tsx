@@ -174,7 +174,11 @@ function CategoriesPage() {
               autoFocus
             />
           </div>
-          <Button type="submit" size="sm" disabled={!newName.trim() || creating}>
+          <Button
+            type="submit"
+            size="sm"
+            disabled={!newName.trim() || creating}
+          >
             {creating ? 'Adding...' : 'Add'}
           </Button>
           <button

@@ -47,18 +47,15 @@ type Entity = Awaited<ReturnType<typeof listEntities>>[number]
 // ─── Role Badge ──────────────────────────────────────────────────────
 
 const ROLE_STYLES: Record<string, string> = {
-  admin:
-    'bg-violet-50 text-violet-700 dark:bg-violet-950 dark:text-violet-300',
-  accountant:
-    'bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300',
+  admin: 'bg-violet-50 text-violet-700 dark:bg-violet-950 dark:text-violet-300',
+  accountant: 'bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300',
   user: 'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300',
 }
 
 const AVATAR_COLORS: Record<string, string> = {
   admin:
     'bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-300',
-  accountant:
-    'bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300',
+  accountant: 'bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300',
   user: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300',
 }
 
@@ -191,12 +188,7 @@ function InviteDialog({
                   id="inv-role"
                   className={selectClass}
                   value={form.role}
-                  onChange={(e) =>
-                    update(
-                      'role',
-                      e.target.value,
-                    )
-                  }
+                  onChange={(e) => update('role', e.target.value)}
                 >
                   <option value="user">Contractor</option>
                   <option value="admin">Admin</option>
@@ -321,7 +313,7 @@ function EditDialog({
       await updateUser({
         data: {
           id: editUser.id,
-          role: role as 'user' | 'admin' | 'accountant',
+          role: role,
           entityId,
           invoicePrefix: prefix,
         },
@@ -497,11 +489,7 @@ function UsersPage() {
             {entities.length} {entities.length === 1 ? 'entity' : 'entities'}
           </p>
         </div>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => setShowInvite(true)}
-        >
+        <Button size="sm" variant="outline" onClick={() => setShowInvite(true)}>
           <UserPlus size={14} className="mr-1.5" />
           Add User
         </Button>
@@ -580,7 +568,9 @@ function UsersPage() {
               className="group flex cursor-pointer items-center gap-3 py-3.5 transition-colors hover:bg-[var(--accent)]/50"
             >
               {/* Avatar */}
-              <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${AVATAR_COLORS[u.role] ?? AVATAR_COLORS.user}`}>
+              <div
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${AVATAR_COLORS[u.role] ?? AVATAR_COLORS.user}`}
+              >
                 {u.name
                   .split(' ')
                   .map((w) => w[0])
@@ -621,9 +611,7 @@ function UsersPage() {
                 {u.role === 'user' && (
                   <>
                     <FileText size={12} />
-                    <span className="tabular-nums">
-                      {u.invoiceCount ?? 0}
-                    </span>
+                    <span className="tabular-nums">{u.invoiceCount ?? 0}</span>
                   </>
                 )}
               </div>
@@ -639,7 +627,6 @@ function UsersPage() {
               >
                 <Pencil size={13} />
               </button>
-
             </div>
           ))}
         </div>

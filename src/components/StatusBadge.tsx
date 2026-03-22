@@ -8,7 +8,8 @@ const statusStyles: Record<string, { badge: string; dot: string }> = {
     dot: 'bg-sky-500 dark:bg-sky-400',
   },
   approved: {
-    badge: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300',
+    badge:
+      'bg-emerald-50 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300',
     dot: 'bg-emerald-500 dark:bg-emerald-400',
   },
   rejected: {
@@ -16,7 +17,8 @@ const statusStyles: Record<string, { badge: string; dot: string }> = {
     dot: 'bg-rose-500 dark:bg-rose-400',
   },
   paid: {
-    badge: 'bg-violet-50 text-violet-700 dark:bg-violet-900 dark:text-violet-300',
+    badge:
+      'bg-violet-50 text-violet-700 dark:bg-violet-900 dark:text-violet-300',
     dot: 'bg-violet-500 dark:bg-violet-400',
   },
 }

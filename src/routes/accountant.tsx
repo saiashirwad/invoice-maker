@@ -306,7 +306,8 @@ function AccountantPage() {
               <section>
                 {/* Sticky summary */}
                 <div className="sticky top-[6.75rem] z-10 -mx-5 mb-4 border-b border-[var(--border)] bg-[var(--background)]/95 px-5 py-2.5 text-xs font-medium text-[var(--muted-foreground)] backdrop-blur sm:-mx-8 sm:px-8">
-                  {approved.length} invoice{approved.length !== 1 ? 's' : ''} awaiting payment
+                  {approved.length} invoice{approved.length !== 1 ? 's' : ''}{' '}
+                  awaiting payment
                   {' \u00b7 '}
                   <span className="tabular-nums text-[var(--foreground)]">
                     {formatCurrency(
@@ -367,14 +368,17 @@ function AccountantPage() {
               <section>
                 <div>
                   {paid.map((inv, i) => {
-                    const prevMonth = i > 0 ? getMonthKey(paid[i - 1].invoiceDate) : null
+                    const prevMonth =
+                      i > 0 ? getMonthKey(paid[i - 1].invoiceDate) : null
                     const curMonth = getMonthKey(inv.invoiceDate)
                     const showHeader = curMonth !== prevMonth
 
                     return (
                       <div key={inv.id}>
                         {showHeader && (
-                          <div className={`${i > 0 ? 'mt-6 border-t border-[var(--border)] pt-5' : ''} mb-2 text-[11px] font-medium uppercase tracking-wider text-[var(--muted-foreground)]`}>
+                          <div
+                            className={`${i > 0 ? 'mt-6 border-t border-[var(--border)] pt-5' : ''} mb-2 text-[11px] font-medium uppercase tracking-wider text-[var(--muted-foreground)]`}
+                          >
                             {formatMonthLabel(inv.invoiceDate)}
                           </div>
                         )}
