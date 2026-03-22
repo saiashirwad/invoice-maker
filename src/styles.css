@@ -1,0 +1,292 @@
+/*
+ * Elevation strategy:
+ *   Borders → containment (cards, sections, grouped content)
+ *   Shadows → overlays only (dialogs, popovers, tooltips, dropdowns)
+ *   Exception: invoice paper preview keeps drop-shadow (physical document simulation)
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,500;1,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+@import 'tailwindcss';
+@plugin '@tailwindcss/typography';
+
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: #fafaf8;
+  --foreground: #1c1917;
+  --card: #fafaf8;
+  --card-foreground: #1c1917;
+  --popover: #ffffff;
+  --popover-foreground: #1c1917;
+  --primary: #1c1917;
+  --primary-foreground: #fafaf8;
+  --secondary: #f5f4f0;
+  --secondary-foreground: #1c1917;
+  --muted: #f5f4f0;
+  --muted-foreground: #78716c;
+  --accent: #f5f4f0;
+  --accent-foreground: #1c1917;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #e8e5df;
+  --input: #e8e5df;
+  --ring: #a8a29e;
+  --emerald: #059669;
+  --emerald-light: #10b981;
+  --radius: 0.75rem;
+}
+
+.dark {
+  --background: #1a1816;
+  --foreground: #faf9f7;
+  --card: #211f1d;
+  --card-foreground: #faf9f7;
+  --popover: #211f1d;
+  --popover-foreground: #faf9f7;
+  --primary: #e7e5e4;
+  --primary-foreground: #1a1816;
+  --secondary: #292524;
+  --secondary-foreground: #faf9f7;
+  --muted: #292524;
+  --muted-foreground: #a8a29e;
+  --accent: #292524;
+  --accent-foreground: #faf9f7;
+  --destructive: #ff6568;
+  --destructive-foreground: #ffffff;
+  --border: rgba(255, 255, 255, 0.10);
+  --input: rgba(255, 255, 255, 0.13);
+  --ring: #78716c;
+  --emerald: #10b981;
+  --emerald-light: #6ee7b7;
+}
+
+@theme inline {
+  --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+html,
+body,
+#app {
+  min-height: 100%;
+}
+
+html {
+  overscroll-behavior: none;
+  scrollbar-gutter: stable;
+}
+
+body {
+  margin: 0;
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  background-color: var(--background);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.focus-emerald:focus-visible {
+  border-color: var(--emerald);
+  box-shadow: 0 2px 0 0 var(--emerald);
+}
+
+.focus-emerald-soft:focus-visible {
+  box-shadow: 0 2px 0 0 var(--emerald);
+}
+
+@media (max-width: 1023px) {
+  .form-panel {
+    width: 100% !important;
+  }
+}
+
+/* Custom textarea resize handle */
+textarea::-webkit-resizer {
+  display: none;
+}
+textarea {
+  resize: vertical;
+  background-image: url("data:image/svg+xml,%3Csvg width='8' height='8' viewBox='0 0 8 8' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M6.5 8L8 6.5M3.5 8L8 3.5' stroke='%23a3a3a3' stroke-width='1' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: bottom 4px right 4px;
+  background-size: 8px 8px;
+}
+
+/* Hide number input spinners */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+}
+
+a {
+  color: var(--foreground);
+  text-decoration: none;
+}
+
+@media print {
+  @page {
+    margin: 0;
+    size: auto;
+  }
+  body {
+    background: white !important;
+    color: #070707 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  main {
+    display: none !important;
+  }
+  html {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}
+
+.display-title {
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+button,
+a {
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease,
+    opacity 150ms ease,
+    transform 150ms ease;
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* Check draw animation */
+@keyframes draw-check {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Line item animations */
+@keyframes item-enter {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.line-item-enter {
+  animation: item-enter 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+}
+
+@keyframes item-exit {
+  to {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+}
+
+.line-item-exit {
+  animation: item-exit 150ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes total-flash {
+  0% {
+    background-color: color-mix(in srgb, var(--emerald) 12%, transparent);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.total-flash {
+  animation: total-flash 600ms ease-out;
+  border-radius: 4px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Selection highlight — emerald tint with enough contrast */
+::selection {
+  background-color: color-mix(in srgb, var(--emerald) 22%, white 18%);
+  color: var(--foreground);
+}
+
+/* Scrollbar styling — thin, themed, unobtrusive */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: color-mix(in srgb, var(--emerald) 20%, var(--border));
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in srgb, var(--emerald) 42%, transparent);
+}
+
+/* Smooth scroll in preview pane */
+.preview-scroll {
+  scroll-behavior: smooth;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+}

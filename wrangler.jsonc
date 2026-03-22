@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "invoice-maker",
+  "main": "@tanstack/react-start/server-entry",
+  "compatibility_date": "2026-03-17",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "invoice-maker",
+      "database_id": "58c1b613-6cd1-4489-801e-561a3c839005",
+    },
+  ],
+  "r2_buckets": [
+    {
+      "binding": "BUCKET",
+      "bucket_name": "invoice-maker",
+    },
+  ],
+}
