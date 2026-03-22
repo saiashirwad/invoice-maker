@@ -1,4 +1,5 @@
-import { KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { KeyboardEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
 import { requireAdmin } from '@/lib/route-auth'
 import {
@@ -10,24 +11,19 @@ import {
   rejectInvoice,
 } from '@/lib/invoice-fns'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/components/ui/drawer'
 import { AdminLayout } from '@/components/AdminLayout'
 import { formatCurrency } from '@/components/invoice/useInvoice'
-import { EntityChip } from '@/components/admin/EntityChip'
+import { Check, Clock3, ExternalLink, Loader2, X } from 'lucide-react'
 import {
-  AlertCircle,
-  ArrowLeftRight,
-  Check,
-  CircleCheck,
-  Clock3,
-  ExternalLink,
-  FileText,
-  Loader2,
-  X,
-} from 'lucide-react'
-import { formatInvoiceDate, getBillToName as getBillToNameShared } from '@/components/InvoiceRow'
-import { InvoiceQuickView } from '@/components/InvoiceQuickView'
-import { StatusBadge } from '@/components/StatusBadge'
+  formatInvoiceDate,
+  getBillToName as getBillToNameShared,
+} from '@/components/InvoiceRow'
 
 export const Route = createFileRoute('/admin/')({
   beforeLoad: requireAdmin,
@@ -47,7 +43,6 @@ type PendingInvoice = Awaited<ReturnType<typeof listPendingInvoices>>[number]
 type InvoiceHistory = Awaited<ReturnType<typeof listAdminInvoices>>[number]
 type InvoiceDetail = Awaited<ReturnType<typeof getInvoice>>
 
-type TimelineItem = InvoiceDetail['timeline'][number]
 type LineItem = InvoiceDetail['lineItems'][number]
 
 const formatDate = formatInvoiceDate
@@ -79,7 +74,8 @@ function groupEntities(invoices: PendingInvoice[]) {
       entityName,
       items: [...items].sort((a, b) => {
         return (
-          new Date(b.invoiceDate).getTime() - new Date(a.invoiceDate).getTime() ||
+          new Date(b.invoiceDate).getTime() -
+            new Date(a.invoiceDate).getTime() ||
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         )
       }),
@@ -141,7 +137,10 @@ function agingDays(invoice: PendingInvoice) {
   return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)))
 }
 
-function getAnomalySignals(invoice: PendingInvoice, prev: InvoiceHistory | null) {
+function getAnomalySignals(
+  invoice: PendingInvoice,
+  prev: InvoiceHistory | null,
+) {
   const signals: string[] = []
   if (!prev) {
     signals.push('First pending invoice')
@@ -170,7 +169,8 @@ function getAnomalySignals(invoice: PendingInvoice, prev: InvoiceHistory | null)
   if (
     invoice.totalTaxCents > 0 &&
     ((invoice.taxPercent !== null && invoice.taxPercent >= 15) ||
-      (invoice.taxPercent === null && invoice.totalTaxCents > invoice.subtotalCents * 0.2))
+      (invoice.taxPercent === null &&
+        invoice.totalTaxCents > invoice.subtotalCents * 0.2))
   ) {
     signals.push('Tax flagged')
   }
@@ -183,141 +183,13 @@ function formatMoney(totalCents: number, currencyCode: string) {
 }
 
 function sumByCurrency(invoices: PendingInvoice[]) {
-  return Object.entries(buildCurrencyTotals(invoices)).map(([currency, total]) => {
-    return {
-      currency,
-      total: formatMoney(total, currency),
-    }
-  })
-}
-
-function InvoiceRow({
-  invoice,
-  onSelect,
-  onOpen,
-  isSelected,
-  isActive,
-  signals,
-  onAction,
-  onToggle,
-  onReject,
-  rowRef,
-  disabled,
-}: {
-  invoice: PendingInvoice
-  onSelect: () => void
-  onOpen: () => void
-  onToggle: () => void
-  onAction: () => Promise<void>
-  onReject: () => Promise<void>
-  isSelected: boolean
-  isActive: boolean
-  signals: string[]
-  rowRef: (node: HTMLButtonElement | null) => void
-  disabled: boolean
-}) {
-  const amount = formatMoney(invoice.grandTotalCents, invoice.currencyCode)
-  const contractor = invoice.userName || getBillToName(invoice.billTo)
-
-  return (
-    <button
-      ref={rowRef}
-      type="button"
-      onClick={onOpen}
-      className={`group grid w-full grid-cols-[auto_1.25fr_1.1fr_1fr_auto] items-center gap-4 border-b border-[var(--border)] px-3 py-3 text-left transition last:border-b-0 focus-visible:bg-[var(--accent)] focus-visible:outline-none lg:grid-cols-[auto_1.2fr_1fr_0.85fr_auto] ${
-        isActive
-          ? 'bg-[var(--secondary)]'
-          : disabled
-            ? 'opacity-70'
-            : 'hover:bg-[var(--accent)]'
-      }`}
-    >
-      <div className="w-5 shrink-0 text-right">
-        <Checkbox
-          checked={isSelected}
-          onClick={(event) => {
-            event.stopPropagation()
-            onToggle()
-          }}
-        />
-      </div>
-
-      <div className="min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="truncate text-sm font-medium text-[var(--foreground)]">
-            {contractor}
-          </span>
-          <span className="shrink-0 text-xs text-[var(--muted-foreground)]"># {invoice.invoiceNumber}</span>
-          <span className="shrink-0">
-            <EntityChip entity={invoice.entityName ?? 'Unknown'} className="text-[10px]" />
-          </span>
-        </div>
-        <p className="mt-1 truncate text-xs text-[var(--muted-foreground)]">
-          {getBillToName(invoice.billTo)} · {formatDate(invoice.createdAt)}
-        </p>
-      </div>
-
-      <div className="min-w-0 text-xs text-[var(--muted-foreground)]">
-        <div className="truncate">
-          Submitted {formatDate(invoice.invoiceDate)} · {invoice.category || 'Uncategorized'}
-        </div>
-        <div className="mt-1 text-xs text-[var(--muted-foreground)]">
-          <StatusBadge status={invoice.status} />
-        </div>
-      </div>
-
-      <div className="min-w-0">
-        {signals.length === 0 ? (
-          <span className="inline-flex rounded-full border border-[var(--border)] px-2 py-1 text-[10px] text-[var(--muted-foreground)]">
-            Clear
-          </span>
-        ) : (
-          <div className="flex flex-wrap gap-1.5">
-            {signals.slice(0, 2).map((signal) => (
-              <span
-                key={signal}
-                className="inline-flex items-center gap-1 rounded-full border border-amber-300/50 bg-amber-50 px-2 py-1 text-[10px] font-medium text-amber-900 dark:bg-amber-950 dark:text-amber-200"
-              >
-                <AlertCircle size={11} strokeWidth={2.2} />
-                {signal}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="shrink-0 text-right">
-        <div className="text-sm font-medium tabular-nums text-[var(--foreground)]">
-          {amount}
-        </div>
-        <div className="mt-2 flex items-center justify-end gap-2">
-          <Button
-            variant="outline"
-            size="xs"
-            onClick={(event) => {
-              event.stopPropagation()
-              void onAction()
-            }}
-            disabled={disabled}
-          >
-            {disabled ? <Loader2 size={12} className="animate-spin" /> : <CircleCheck size={12} />}
-            <span>Approve</span>
-          </Button>
-          <button
-            type="button"
-            className="inline-flex h-6 items-center justify-center rounded-md border border-rose-200 px-2 text-[11px] font-medium text-rose-700 transition hover:bg-rose-50 disabled:opacity-50 dark:border-rose-900/70 dark:text-rose-300 dark:hover:bg-rose-950"
-            onClick={(event) => {
-              event.stopPropagation()
-              void onReject()
-            }}
-            disabled={disabled}
-            aria-label={`Reject ${invoice.invoiceNumber}`}
-          >
-            <X size={12} />
-          </button>
-        </div>
-      </div>
-    </button>
+  return Object.entries(buildCurrencyTotals(invoices)).map(
+    ([currency, total]) => {
+      return {
+        currency,
+        total: formatMoney(total, currency),
+      }
+    },
   )
 }
 
@@ -341,69 +213,37 @@ function SummaryBand({
   hasAny: boolean
 }) {
   const totalPending = pending.length
+  const rejectCount = signalCounts.rejectionHistory
+
+  const stats = [
+    ...pendingByCurrency.map((item) => item.total),
+    ...(userCounts.sv > 0 || userCounts.lp > 0
+      ? [`SV ${userCounts.sv}`, `LP ${userCounts.lp}`]
+      : []),
+    ...(rejectCount > 0 ? [`${rejectCount} rejects`] : []),
+  ]
 
   return (
-    <section className="rounded-xl border border-[var(--border)] bg-[var(--secondary)]/55 p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-[11px] uppercase tracking-[0.15em] text-[var(--muted-foreground)]">
-            Review queue
-          </p>
-          <p className="mt-1 text-2xl font-semibold text-[var(--foreground)]">{totalPending} pending</p>
-          <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-            {hasAny
-              ? 'Prioritize by anomaly and age signals before opening each invoice.'
-              : 'Queue clear. The lane is waiting for submissions.'}
-          </p>
-        </div>
-
-        <div className="grid w-full gap-2 sm:w-auto sm:grid-cols-2 lg:grid-cols-4 lg:gap-3">
-          {pendingByCurrency.map((item) => (
-            <div
-              key={item.currency}
-              className="rounded-md border border-[var(--border)] bg-[var(--background)] px-2.5 py-2"
-            >
-              <p className="text-[10px] uppercase text-[var(--muted-foreground)]">{item.currency}</p>
-              <p className="mt-1 text-sm font-medium tabular-nums text-[var(--foreground)]">
-                {item.total}
-              </p>
-            </div>
-          ))}
-
-          <div className="rounded-md border border-[var(--border)] bg-[var(--background)] px-2.5 py-2">
-            <p className="text-[10px] uppercase text-[var(--muted-foreground)]">Entity split</p>
-            <p className="mt-1 text-sm font-medium text-[var(--foreground)]">
-              <span className="inline-flex items-center gap-1.5">
-                <EntityChip entity="SV" /> {userCounts.sv}
+    <section className="px-4 py-3">
+      {hasAny ? (
+        <div className="flex items-baseline gap-3">
+          <span className="tabular-nums text-sm font-medium text-[var(--foreground)]">
+            {totalPending} pending
+          </span>
+          <div className="flex items-baseline gap-1.5 text-xs tabular-nums text-[var(--muted-foreground)]">
+            {stats.map((stat, i) => (
+              <span key={i}>
+                {i > 0 && <span className="mr-1.5 select-none">&middot;</span>}
+                {stat}
               </span>
-              <span className="mx-2 text-[var(--muted-foreground)]">•</span>
-              <span className="inline-flex items-center gap-1.5">
-                <EntityChip entity="LP" /> {userCounts.lp}
-              </span>
-            </p>
-          </div>
-
-          <div className="rounded-md border border-[var(--border)] bg-[var(--background)] px-2.5 py-2">
-            <p className="text-[10px] uppercase text-[var(--muted-foreground)]">Anomaly snapshot</p>
-            <p className="mt-1 text-xs text-[var(--foreground)]">
-              <span className="inline-flex gap-2">
-                <span className="rounded-full bg-amber-100 px-2 py-1 text-[10px] dark:bg-amber-950/70">
-                  {signalCounts.first} first
-                </span>
-                <span className="rounded-full bg-amber-100 px-2 py-1 text-[10px] dark:bg-amber-950/70">
-                  {signalCounts.aging} aging
-                </span>
-                <span className="rounded-full bg-amber-100 px-2 py-1 text-[10px] dark:bg-amber-950/70">
-                  {signalCounts.amountSwing} swing
-                </span>
-                <span className="rounded-full bg-amber-100 px-2 py-1 text-[10px] dark:bg-amber-950/70">
-                  {signalCounts.rejectionHistory} rejects
-                </span>
-              </span>
-            </p>
+            ))}
           </div>
         </div>
-      </div>
+      ) : (
+        <p className="text-sm text-[var(--muted-foreground)]">
+          No invoices pending
+        </p>
+      )}
     </section>
   )
 }
@@ -419,171 +259,107 @@ function InspectorSummary({
   prior: InvoiceHistory | null
   loading: boolean
 }) {
-  const amount = invoice
-    ? formatMoney(invoice.grandTotalCents, invoice.currencyCode)
-    : '$0'
-  const invoiceAmount = invoice ? formatMoney(invoice.subtotalCents, invoice.currencyCode) : '$0'
-  const taxAmount = invoice ? formatMoney(invoice.totalTaxCents, invoice.currencyCode) : '$0'
+  if (!invoice) return null
+
+  const amount = formatMoney(invoice.grandTotalCents, invoice.currencyCode)
+  const subtotal = formatMoney(invoice.subtotalCents, invoice.currencyCode)
+  const tax = formatMoney(invoice.totalTaxCents, invoice.currencyCode)
   const previousAmount = prior
     ? formatMoney(prior.grandTotalCents, prior.currencyCode)
     : null
 
-  if (!invoice) {
-    return (
-      <div className="rounded-lg border border-dashed border-[var(--border)] p-6 text-center">
-        <FileText size={16} className="mx-auto text-[var(--muted-foreground)]" />
-        <p className="mt-2 text-sm text-[var(--muted-foreground)]">Select an invoice to open the inspector</p>
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-4">
-      <InvoiceQuickView
-        amount={amount}
-        date={formatDate(invoice.createdAt)}
-        fromEntity={invoice.companyDetails}
-        toEntity={getBillToName(invoice.billTo)}
-        amountExtra={
-          <div className="mt-2 flex items-center justify-between text-xs text-[var(--muted-foreground)]">
-            <span className="inline-flex items-center gap-1.5">
-              <CircleCheck size={12} />
-              {invoice.userName || invoice.userName === null
-                ? invoice.userName
-                : getBillToName(invoice.billTo)}
-            </span>
-            <span>{invoice.entityName || 'Unknown entity'}</span>
-          </div>
-        }
-      >
-        <div className="mt-3 rounded-lg border border-[var(--border)] p-3">
-          <p className="text-xs font-medium text-[var(--foreground)]">Summary</p>
-          <div className="mt-2 grid gap-2 text-xs text-[var(--muted-foreground)] sm:grid-cols-2">
-            <div>
-              <span className="text-[10px] uppercase text-[var(--muted-foreground)]">Submitted</span>
-              <div className="text-sm text-[var(--foreground)]">{formatDate(invoice.createdAt)}</div>
-            </div>
-            <div>
-              <span className="text-[10px] uppercase text-[var(--muted-foreground)]">Invoice date</span>
-              <div className="text-sm text-[var(--foreground)]">{formatDate(invoice.invoiceDate)}</div>
-            </div>
-            <div>
-              <span className="text-[10px] uppercase text-[var(--muted-foreground)]">Subtotal</span>
-              <div className="text-sm text-[var(--foreground)]">{invoiceAmount}</div>
-            </div>
-            <div>
-              <span className="text-[10px] uppercase text-[var(--muted-foreground)]">Tax</span>
-              <div className="text-sm text-[var(--foreground)]">
-                {taxAmount}
-                {invoice.taxPercent ? ` (${invoice.taxPercent}%)` : ''}
-              </div>
-            </div>
-            {previousAmount && (
-              <div className="sm:col-span-2">
-                <span className="text-[10px] uppercase text-[var(--muted-foreground)]">
-                  Previous invoice
-                </span>
-                <div className="text-sm text-[var(--foreground)]">
-                  {previousAmount} · {prior?.invoiceNumber}
-                </div>
-              </div>
-            )}
-          </div>
-          {invoice.rejectionReason && (
-            <div className="mt-3 rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
-            {invoice.rejectionReason}
-          </div>
-          )}
-          {loading ? (
-            <div className="mt-3 flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
-              <Loader2 size={14} className="animate-spin" />
-              Loading full invoice details
-            </div>
-          ) : null}
+      {/* Amount */}
+      <div>
+        <p className="text-xl font-semibold tabular-nums text-[var(--foreground)]">
+          {amount}
+        </p>
+        <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
+          {invoice.entityName || 'Unknown entity'} →{' '}
+          {getBillToName(invoice.billTo)}
+        </p>
+      </div>
+
+      {/* Key details */}
+      <div className="space-y-1.5 text-xs">
+        <div className="flex justify-between">
+          <span className="text-[var(--muted-foreground)]">Invoice date</span>
+          <span className="text-[var(--foreground)]">
+            {formatDate(invoice.invoiceDate)}
+          </span>
         </div>
-      </InvoiceQuickView>
-
-      {loading ? null : (
-        <>
-          <div className="rounded-lg border border-[var(--border)] p-3">
-            <p className="text-xs font-medium text-[var(--foreground)]">Line items</p>
-            <div className="mt-2 space-y-1">
-              {(invoiceDetail?.lineItems ?? []).length === 0 ? (
-                <p className="text-xs text-[var(--muted-foreground)]">
-                  No line items available.
-                </p>
-              ) : (
-                invoiceDetail?.lineItems?.map((line: LineItem) => (
-                  <div
-                    key={line.id}
-                    className="flex items-center justify-between gap-2 text-xs"
-                  >
-                    <p className="min-w-0 text-[var(--foreground)]">
-                      <span className="font-medium">{line.description}</span>
-                      <span className="text-[var(--muted-foreground)]"> · {line.quantity} ×</span>
-                      <span className="ml-1 text-[var(--muted-foreground)]">
-                        {formatMoney(line.unitCostCents, invoice.currencyCode)}
-                      </span>
-                    </p>
-                    <p className="font-medium tabular-nums text-[var(--foreground)]">
-                      {formatMoney(line.amountCents, invoice.currencyCode)}
-                    </p>
-                  </div>
-                ))
-              )}
-            </div>
+        <div className="flex justify-between">
+          <span className="text-[var(--muted-foreground)]">Submitted</span>
+          <span className="text-[var(--foreground)]">
+            {formatDate(invoice.createdAt)}
+          </span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-[var(--muted-foreground)]">Subtotal</span>
+          <span className="tabular-nums text-[var(--foreground)]">
+            {subtotal}
+          </span>
+        </div>
+        {invoice.totalTaxCents > 0 && (
+          <div className="flex justify-between">
+            <span className="text-[var(--muted-foreground)]">Tax</span>
+            <span className="tabular-nums text-[var(--foreground)]">
+              {tax}
+              {invoice.taxPercent ? ` (${invoice.taxPercent}%)` : ''}
+            </span>
           </div>
-
-          <div className="rounded-lg border border-[var(--border)] p-3">
-            <p className="text-xs font-medium text-[var(--foreground)]">Timeline</p>
-            <div className="mt-2 space-y-2">
-              {(invoiceDetail?.timeline ?? []).length === 0 ? (
-                <p className="text-xs text-[var(--muted-foreground)]">
-                  No activity yet.
-                </p>
-              ) : (
-                invoiceDetail?.timeline?.map((entry: TimelineItem, index: number) => (
-                  <div
-                    key={`${entry.action}-${entry.createdAt}-${index}`}
-                    className="flex items-start justify-between gap-2 text-xs"
-                  >
-                    <span className="text-[var(--foreground)] capitalize">
-                      {entry.action}
-                    </span>
-                    <span className="text-[var(--muted-foreground)]">
-                      {entry.actorName}
-                      {entry.createdAt
-                        ? ` · ${formatDate(entry.createdAt)}`
-                        : ''}
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
+        )}
+        {previousAmount && (
+          <div className="flex justify-between">
+            <span className="text-[var(--muted-foreground)]">Previous</span>
+            <span className="tabular-nums text-[var(--foreground)]">
+              {previousAmount} · {prior?.invoiceNumber}
+            </span>
           </div>
-        </>
+        )}
+      </div>
+
+      {invoice.rejectionReason && (
+        <div className="rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
+          {invoice.rejectionReason}
+        </div>
       )}
 
-      <div className="rounded-lg border border-[var(--border)] p-3">
-        <p className="text-xs font-medium text-[var(--foreground)]">Actions</p>
-        <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-          Use the pinned controls below for the current invoice.
-        </p>
-        <div className="mt-2 rounded-md bg-[var(--secondary)] p-2 text-xs text-[var(--muted-foreground)]">
-          <p>
-            Keep keyboard shortcut in mind: <strong>A</strong> approve / <strong>R</strong>{' '}
-            reject / <strong>J</strong> / <strong>K</strong> navigate.
-          </p>
-          <Link
-            to="/invoices/$id"
-            params={{ id: invoice.id }}
-            className="mt-2 inline-flex items-center gap-1.5 text-[var(--foreground)] hover:underline"
-          >
-            <ArrowLeftRight size={12} />
-            Open full invoice
-          </Link>
+      {/* Line items */}
+      {loading ? (
+        <div className="flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
+          <Loader2 size={14} className="animate-spin" />
+          Loading details…
         </div>
-      </div>
+      ) : (
+        <div className="border-t border-[var(--border)] pt-3">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--muted-foreground)]">
+            Line items
+          </p>
+          <div className="mt-2 space-y-1.5">
+            {(invoiceDetail?.lineItems ?? []).length === 0 ? (
+              <p className="text-xs text-[var(--muted-foreground)]">
+                No line items.
+              </p>
+            ) : (
+              invoiceDetail?.lineItems.map((line: LineItem) => (
+                <div
+                  key={line.id}
+                  className="flex items-start justify-between gap-3 text-xs"
+                >
+                  <span className="min-w-0 text-[var(--foreground)]">
+                    {line.description}
+                  </span>
+                  <span className="shrink-0 tabular-nums font-medium text-[var(--foreground)]">
+                    {formatMoney(line.amountCents, invoice.currencyCode)}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -598,7 +374,10 @@ function AdminPage() {
     () => pendingGroups.flatMap((section) => section.items),
     [pendingGroups],
   )
-  const orderedIds = orderedInvoices.map((invoice) => invoice.id)
+  const orderedIds = useMemo(
+    () => orderedInvoices.map((invoice) => invoice.id),
+    [orderedInvoices],
+  )
 
   const entitySplit = useMemo(() => {
     return pending.reduce(
@@ -629,7 +408,8 @@ function AdminPage() {
       const signals = getAnomalySignals(invoice, prev)
 
       if (!prev) totals.first += 1
-      if (signals.some((signal) => signal.startsWith('Aging'))) totals.aging += 1
+      if (signals.some((signal) => signal.startsWith('Aging')))
+        totals.aging += 1
       if (signals.some((signal) => signal.startsWith('Amount swing'))) {
         totals.amountSwing += 1
       }
@@ -641,29 +421,24 @@ function AdminPage() {
       }
     }
 
-    return { totals, signalsByInvoice: pending.map((invoice) => ({
-      invoice,
-      signals: getAnomalySignals(invoice, getPrevInvoice(invoice, historyMap)),
-    })) }
+    return {
+      totals,
+    }
   }, [historyMap, pending])
 
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(
-    orderedIds[0] ?? null,
+    null,
   )
-  const [activeInvoiceId, setActiveInvoiceId] = useState<string | null>(orderedIds[0] ?? null)
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [activeInvoiceId, setActiveInvoiceId] = useState<string | null>(null)
   const [rowLoading, setRowLoading] = useState<Set<string>>(new Set())
-  const [batchLoading, setBatchLoading] = useState(false)
   const [inspectorRejectReason, setInspectorRejectReason] = useState('')
   const [showInspectorReject, setShowInspectorReject] = useState(false)
   const [invoiceDetail, setInvoiceDetail] = useState<InvoiceDetail | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
-  const [batchRejectLoading, setBatchRejectLoading] = useState(false)
-  const [batchRejectReason, setBatchRejectReason] = useState('')
-  const [batchActionBusy, setBatchActionBusy] = useState(false)
+  const [drawerOpen, setDrawerOpen] = useState(false)
 
   const queueRef = useRef<HTMLDivElement>(null)
-  const rowRefs = useRef<Record<string, HTMLButtonElement | null>>({})
+  const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({})
 
   const selectedInvoice = useMemo(
     () => pending.find((invoice) => invoice.id === selectedInvoiceId) ?? null,
@@ -671,7 +446,8 @@ function AdminPage() {
   )
 
   const priorInvoice = useMemo(
-    () => (selectedInvoice ? getPrevInvoice(selectedInvoice, historyMap) : null),
+    () =>
+      selectedInvoice ? getPrevInvoice(selectedInvoice, historyMap) : null,
     [selectedInvoice, historyMap],
   )
 
@@ -683,9 +459,9 @@ function AdminPage() {
       return
     }
 
-    if (!selectedInvoiceId || !orderedIds.includes(selectedInvoiceId)) {
-      setSelectedInvoiceId(orderedIds[0])
-      setActiveInvoiceId(orderedIds[0])
+    if (selectedInvoiceId && !orderedIds.includes(selectedInvoiceId)) {
+      setSelectedInvoiceId(null)
+      setActiveInvoiceId(null)
     }
   }, [orderedIds, selectedInvoiceId, session?.user])
 
@@ -710,41 +486,20 @@ function AdminPage() {
     }
   }, [selectedInvoice])
 
-  useEffect(() => {
-    if (orderedIds.length === 0) {
-      setSelectedIds(new Set())
-      return
-    }
-
-    setSelectedIds((prev) => {
-      const next = new Set<string>()
-      for (const id of prev) {
-        if (orderedIds.includes(id)) {
-          next.add(id)
-        }
-      }
-      return next
-    })
-  }, [orderedIds])
-
-  const signalByInvoice = useMemo(() => {
-    const map = new Map<string, string[]>()
-    for (const { invoice, signals } of signalMap.signalsByInvoice) {
-      map.set(invoice.id, signals)
-    }
-    return map
-  }, [signalMap.signalsByInvoice])
-
   const updateSelection = useCallback((id: string) => {
     setSelectedInvoiceId((current) => (current === id ? current : id))
     setActiveInvoiceId(id)
     setShowInspectorReject(false)
     setInspectorRejectReason('')
+    setDrawerOpen(true)
   }, [])
 
-  const setRowElementRef = useCallback((id: string, node: HTMLButtonElement | null) => {
-    rowRefs.current[id] = node
-  }, [])
+  const setRowElementRef = useCallback(
+    (id: string, node: HTMLTableRowElement | null) => {
+      rowRefs.current[id] = node
+    },
+    [],
+  )
 
   const moveFocus = useCallback((nextId: string | null) => {
     if (!nextId) return
@@ -767,22 +522,6 @@ function AdminPage() {
     [orderedIds],
   )
 
-  const withRowLoading = (id: string, fn: () => Promise<void>) => {
-    return async () => {
-      if (rowLoading.has(id)) return
-      setRowLoading((prev) => new Set(prev).add(id))
-      try {
-        await fn()
-      } finally {
-        setRowLoading((prev) => {
-          const next = new Set(prev)
-          next.delete(id)
-          return next
-        })
-      }
-    }
-  }
-
   const decide = async (
     invoice: PendingInvoice,
     action: 'approve' | 'reject',
@@ -795,14 +534,8 @@ function AdminPage() {
       if (action === 'approve') {
         await approveInvoice({ data: { id: invoice.id } })
       } else {
-        await rejectInvoice({ data: { id: invoice.id, reason }})
+        await rejectInvoice({ data: { id: invoice.id, reason } })
       }
-
-      setSelectedIds((prev) => {
-        const next = new Set(prev)
-        next.delete(invoice.id)
-        return next
-      })
 
       const next = nextInvoiceId(invoice.id)
       setSelectedInvoiceId(next)
@@ -821,96 +554,47 @@ function AdminPage() {
     }
   }
 
-  const handleApprove = useCallback(async (invoice: PendingInvoice) => {
-    await decide(invoice, 'approve')
-  }, [decide])
+  const handleApprove = useCallback(
+    async (invoice: PendingInvoice) => {
+      await decide(invoice, 'approve')
+    },
+    [decide],
+  )
 
-  const handleReject = useCallback(async (invoice: PendingInvoice, reason?: string) => {
-    await decide(invoice, 'reject', reason)
-  }, [decide])
-
-  const handleBatchApprove = async () => {
-    const selected = [...selectedIds]
-    if (selected.length === 0) return
-    setBatchLoading(true)
-    setBatchActionBusy(true)
-
-    try {
-      for (const id of selected) {
-        await approveInvoice({ data: { id } })
-      }
-      setSelectedIds(new Set())
-
-      const idsAfter = orderedIds.filter((id) => !selected.includes(id))
-      setSelectedInvoiceId(idsAfter[0] ?? null)
-      setActiveInvoiceId(idsAfter[0] ?? null)
-      await router.invalidate()
-    } finally {
-      setBatchLoading(false)
-      setBatchActionBusy(false)
-    }
-  }
-
-  const handleBatchReject = async () => {
-    const selected = [...selectedIds]
-    if (selected.length === 0) return
-    setBatchRejectLoading(true)
-    setBatchActionBusy(true)
-
-    try {
-      for (const id of selected) {
-        await rejectInvoice({
-          data: {
-            id,
-            reason: batchRejectReason.trim() || undefined,
-          },
-        })
-      }
-      setSelectedIds(new Set())
-      setBatchRejectReason('')
-      const idsAfter = orderedIds.filter((id) => !selected.includes(id))
-      setSelectedInvoiceId(idsAfter[0] ?? null)
-      setActiveInvoiceId(idsAfter[0] ?? null)
-      await router.invalidate()
-    } finally {
-      setBatchRejectLoading(false)
-      setBatchActionBusy(false)
-    }
-  }
-
-  const toggleSelect = useCallback((id: string) => {
-    setSelectedIds((current) => {
-      const next = new Set(current)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }, [])
-
-  const toggleSelectAll = useCallback(() => {
-    const all = new Set(selectedIds)
-    if (selectedIds.size === orderedIds.length) {
-      setSelectedIds(new Set())
-      return
-    }
-    for (const id of orderedIds) all.add(id)
-    setSelectedIds(all)
-  }, [orderedIds, selectedIds.size])
+  const handleReject = useCallback(
+    async (invoice: PendingInvoice, reason?: string) => {
+      await decide(invoice, 'reject', reason)
+    },
+    [decide],
+  )
 
   const queueKeyDown = useCallback(
     (event: KeyboardEvent) => {
       if (!activeInvoiceId || orderedIds.length === 0) return
       if ((event.target as HTMLElement).tagName === 'TEXTAREA') return
-      if (['ArrowUp', 'ArrowDown', 'j', 'k', 'A', 'a', 'R', 'r', 'Enter', 'Space', ' '].includes(event.key)) {
+      if (
+        [
+          'ArrowUp',
+          'ArrowDown',
+          'j',
+          'k',
+          'A',
+          'a',
+          'R',
+          'r',
+          'Enter',
+        ].includes(event.key)
+      ) {
         event.preventDefault()
       }
 
       const currentIndex = orderedIds.indexOf(activeInvoiceId)
-      const moveBy = event.key === 'ArrowDown' || event.key === 'j'
-        ? 1
-        : event.key === 'ArrowUp' || event.key === 'k'
-          ? -1
-          : 0
+      const moveBy =
+        event.key === 'ArrowDown' || event.key === 'j'
+          ? 1
+          : event.key === 'ArrowUp' || event.key === 'k'
+            ? -1
+            : 0
 
       if (moveBy !== 0) {
         const nextIndex =
@@ -931,11 +615,6 @@ function AdminPage() {
         return
       }
 
-      if (event.key === ' ' || event.key === 'Space') {
-        toggleSelect(activeInvoiceId)
-        return
-      }
-
       if (event.key === 'A' || event.key === 'a') {
         void handleApprove(invoice)
         return
@@ -946,279 +625,247 @@ function AdminPage() {
         return
       }
     },
-    [activeInvoiceId, orderedIds, pending, moveFocus, handleApprove, handleReject, toggleSelect, updateSelection],
+    [
+      activeInvoiceId,
+      orderedIds,
+      pending,
+      moveFocus,
+      handleApprove,
+      handleReject,
+      updateSelection,
+    ],
   )
-
-  const allSelected = selectedIds.size === orderedIds.length && orderedIds.length > 0
-
-  const selectedCountValue = selectedIds.size
 
   return (
     <AdminLayout
       title="Review"
       pendingCount={pending.length}
       processedCount={counts.all}
-      wideCanvas
-      utility={
-        <div className="text-xs text-[var(--muted-foreground)]">
-          <span>Use keyboard: J/K navigate, A approve, R reject</span>
-        </div>
-      }
     >
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
-        <div className="min-w-0">
-          <SummaryBand
-            pending={pending}
-            pendingByCurrency={currencySummary}
-            signalCounts={signalMap.totals}
-            userCounts={entitySplit}
-            hasAny={pending.length > 0}
-          />
+      <div>
+        <SummaryBand
+          pending={pending}
+          pendingByCurrency={currencySummary}
+          signalCounts={signalMap.totals}
+          userCounts={entitySplit}
+          hasAny={pending.length > 0}
+        />
 
-          <section className="mt-4 rounded-xl border border-[var(--border)]">
-            <div className="border-b border-[var(--border)] bg-[var(--secondary)]/50 px-3 py-2">
-              <div className="flex items-center justify-between gap-2 text-xs">
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    checked={
-                      orderedIds.length > 0 &&
-                      allSelected
-                    }
-                    indeterminate={selectedIds.size > 0 && !allSelected}
-                    onCheckedChange={toggleSelectAll}
-                  />
-                  <span className="font-medium text-[var(--foreground)]">Queue ({orderedIds.length})</span>
-                </div>
-                <p className="text-[var(--muted-foreground)]">Sorted by entity, then recency</p>
-              </div>
-            </div>
-
-            <div
-              ref={queueRef}
-              tabIndex={0}
-              onKeyDown={queueKeyDown}
-              className="scroll-area max-h-[68vh] overflow-auto focus:outline-none lg:max-h-[calc(100vh-18rem)]"
-            >
-              {orderedInvoices.length === 0 ? (
-                <div className="p-6 text-center text-sm text-[var(--muted-foreground)]">
-                  <p className="font-medium text-[var(--foreground)]">No invoices waiting</p>
-                  <p className="mt-1">Pending queue is empty. New submissions will land here.</p>
-                </div>
-              ) : (
-                <>
-                  {pendingGroups.map((group) => (
-                    <div key={group.entityName} className="border-b border-[var(--border)] last:border-b-0">
-                      <div className="flex items-center justify-between px-3 py-2 text-xs">
-                        <p className="inline-flex items-center gap-1.5 font-medium text-[var(--foreground)]">
-                          <EntityChip entity={group.entityName} className="text-[10px]" />
-                          {group.entityName}
-                        </p>
-                        <p className="text-[var(--muted-foreground)]">
-                          {group.items.length} invoice{group.items.length === 1 ? '' : 's'}
-                        </p>
-                      </div>
-                      {group.items.map((invoice) => {
-                        const signals = signalByInvoice.get(invoice.id) ?? []
-                        const active = invoice.id === activeInvoiceId
-                        const loading = rowLoading.has(invoice.id)
-
-                        return (
-                          <InvoiceRow
-                            key={invoice.id}
-                            invoice={invoice}
-                            onSelect={() => toggleSelect(invoice.id)}
-                            onOpen={() => {
-                              updateSelection(invoice.id)
-                            }}
-                            isSelected={selectedIds.has(invoice.id)}
-                            isActive={active}
-                            signals={signals}
-                            onAction={() => withRowLoading(invoice.id, () => handleApprove(invoice))()}
-                            onToggle={() => toggleSelect(invoice.id)}
-                            onReject={() => withRowLoading(invoice.id, () => handleReject(invoice))()}
-                            rowRef={(node) => setRowElementRef(invoice.id, node)}
-                            disabled={loading}
-                          />
-                        )
-                      })}
-                    </div>
-                  ))}
-                </>
-              )}
-            </div>
-
-            <div className="sticky bottom-0 border-t border-[var(--border)] bg-[var(--background)] p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                <p className="text-[var(--muted-foreground)]">
-                  {selectedCountValue > 0
-                    ? `${selectedCountValue} selected for batch`
-                    : 'Select rows to enable batch actions'}
+        <section className="overflow-hidden rounded-lg border border-[var(--border)]">
+          <div
+            ref={queueRef}
+            tabIndex={0}
+            onKeyDown={queueKeyDown}
+            className="scroll-area max-h-[68vh] overflow-auto focus:outline-none lg:max-h-[calc(100vh-18rem)]"
+          >
+            {orderedInvoices.length === 0 ? (
+              <div className="p-6 text-center text-sm text-[var(--muted-foreground)]">
+                <p className="font-medium text-[var(--foreground)]">
+                  No invoices waiting
                 </p>
-                <div className="flex flex-wrap items-center gap-2">
-                  {selectedCountValue > 0 && (
-                    <>
-                      <Button
-                        size="xs"
-                        onClick={() => void handleBatchApprove()}
-                        disabled={batchLoading || batchActionBusy}
-                      >
-                        {batchLoading ? (
-                          <Loader2 size={12} className="animate-spin" />
-                        ) : (
-                          <Check size={12} />
-                        )}
-                        Approve selected
-                      </Button>
-                      <Button
-                        size="xs"
-                        variant="outline"
-                        onClick={() => void handleBatchReject()}
-                        disabled={batchRejectLoading || batchActionBusy}
-                      >
-                        {batchRejectLoading ? (
-                          <Loader2 size={12} className="animate-spin" />
-                        ) : (
-                          <X size={12} />
-                        )}
-                        Reject selected
-                      </Button>
-                    </>
-                  )}
-                </div>
+                <p className="mt-1">
+                  Pending queue is empty. New submissions will land here.
+                </p>
               </div>
-              {selectedCountValue > 0 ? (
-                <label className="mt-2 block text-xs text-[var(--muted-foreground)]">
-                  <span className="mb-1 block">Optional batch rejection reason</span>
-                  <textarea
-                    value={batchRejectReason}
-                    onChange={(event) => setBatchRejectReason(event.target.value)}
-                    placeholder="Optional reason applied to batch reject"
-                    className="w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-xs text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
-                    rows={2}
-                  />
-                </label>
-              ) : null}
-            </div>
-          </section>
-        </div>
+            ) : (
+              <div className="-mx-px overflow-x-auto">
+                <table className="w-full table-auto text-sm">
+                  <thead className="sticky top-0 z-10 bg-[var(--secondary)]">
+                    <tr className="text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--muted-foreground)]">
+                      <th className="px-4 py-3">Invoice</th>
+                      <th className="px-4 py-3">Contractor</th>
+                      <th className="px-4 py-3">Entity</th>
+                      <th className="px-4 py-3">Invoice date</th>
+                      <th className="px-4 py-3">Submitted</th>
+                      <th className="px-4 py-3 text-right">Amount</th>
+                      <th className="px-4 py-3">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orderedInvoices.map((invoice) => {
+                      const active = invoice.id === activeInvoiceId
+                      const loading = rowLoading.has(invoice.id)
+                      const contractor =
+                        invoice.userName || getBillToName(invoice.billTo)
+                      const amount = formatMoney(
+                        invoice.grandTotalCents,
+                        invoice.currencyCode,
+                      )
 
-        <aside className="min-h-0 lg:sticky lg:top-4 lg:self-start">
-          <div className="rounded-xl border border-[var(--border)]">
-            <div className="border-b border-[var(--border)] px-4 py-2.5">
-              <p className="text-xs font-medium uppercase tracking-[0.15em] text-[var(--muted-foreground)]">
-                Inspector
-              </p>
-            </div>
-            <div className="p-3">
+                      return (
+                        <tr
+                          key={invoice.id}
+                          role="button"
+                          tabIndex={0}
+                          ref={(node) => setRowElementRef(invoice.id, node)}
+                          onClick={() => {
+                            updateSelection(invoice.id)
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault()
+                              updateSelection(invoice.id)
+                            }
+                          }}
+                          className={`cursor-pointer border-b border-[var(--border)] bg-[var(--background)] transition-colors last:border-b-0 hover:bg-[var(--surface-sunken)] focus-visible:bg-[var(--surface-sunken)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--foreground)]/15 ${
+                            active ? 'bg-[var(--surface-sunken)]' : ''
+                          } ${loading ? 'opacity-70' : ''}`}
+                        >
+                          <td className="px-4 py-3.5 text-xs tabular-nums font-medium text-[var(--foreground)]">
+                            #{invoice.invoiceNumber}
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <p className="text-sm text-[var(--foreground)]">
+                              {contractor}
+                            </p>
+                          </td>
+                          <td className="px-4 py-3.5 text-sm text-[var(--foreground)]">
+                            {invoice.entityName ?? 'Unknown'}
+                          </td>
+                          <td className="px-4 py-3.5 text-xs text-[var(--foreground)]">
+                            {formatDate(invoice.invoiceDate)}
+                          </td>
+                          <td className="px-4 py-3.5 text-xs text-[var(--foreground)]">
+                            {formatDate(invoice.createdAt)}
+                          </td>
+                          <td className="px-4 py-3.5 text-right font-mono text-sm tabular-nums text-[var(--foreground)]">
+                            {amount}
+                          </td>
+                          <td className="px-4 py-3.5 text-xs text-[var(--muted-foreground)]">
+                            {loading ? 'Updating…' : 'Pending'}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <Drawer
+          direction="right"
+          open={drawerOpen}
+          onOpenChange={(open) => {
+            setDrawerOpen(open)
+            if (!open) setActiveInvoiceId(null)
+          }}
+          handleOnly
+          noBodyStyles
+        >
+          <DrawerContent className="!duration-0 !transition-none [&[data-vaul-drawer-direction=right]]:!translate-x-0">
+            <DrawerHeader className="border-b border-[var(--border)]">
+              <DrawerTitle className="text-sm font-medium text-[var(--foreground)]">
+                {selectedInvoice
+                  ? `${selectedInvoice.userName || getBillToName(selectedInvoice.billTo)} · ${selectedInvoice.invoiceNumber}`
+                  : 'Invoice'}
+              </DrawerTitle>
+            </DrawerHeader>
+            <div className="flex-1 overflow-y-auto p-4">
               <InspectorSummary
                 invoice={selectedInvoice}
                 invoiceDetail={invoiceDetail}
                 prior={priorInvoice}
                 loading={detailLoading}
               />
+            </div>
 
-              <div className="mt-4 space-y-2 border-t border-[var(--border)] pt-3">
-                {selectedInvoice ? (
-                  <>
-                    <Button
-                      className="w-full"
-                      onClick={() => {
-                        if (!selectedInvoice) return
-                        void handleApprove(selectedInvoice)
-                      }}
-                      disabled={selectedInvoice ? rowLoading.has(selectedInvoice.id) : true}
-                    >
-                      {selectedInvoice && rowLoading.has(selectedInvoice.id) ? (
-                        <Loader2 size={14} className="animate-spin" />
-                      ) : (
-                        <Check size={14} />
-                      )}
-                      Approve invoice
-                    </Button>
+            {selectedInvoice && (
+              <div className="space-y-2 border-t border-[var(--border)] p-4">
+                <Button
+                  className="w-full"
+                  onClick={() => {
+                    void handleApprove(selectedInvoice)
+                  }}
+                  disabled={rowLoading.has(selectedInvoice.id)}
+                >
+                  {rowLoading.has(selectedInvoice.id) ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <Check size={14} />
+                  )}
+                  Approve invoice
+                </Button>
 
-                    {!showInspectorReject ? (
+                {!showInspectorReject ? (
+                  <Button
+                    className="w-full"
+                    variant="outline"
+                    onClick={() => setShowInspectorReject(true)}
+                    disabled={rowLoading.has(selectedInvoice.id)}
+                  >
+                    <X size={14} />
+                    Reject invoice
+                  </Button>
+                ) : (
+                  <div className="space-y-2">
+                    <textarea
+                      value={inspectorRejectReason}
+                      onChange={(event) =>
+                        setInspectorRejectReason(event.target.value)
+                      }
+                      placeholder="Rejection reason (optional)"
+                      rows={3}
+                      className="w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-xs text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
+                    />
+                    <div className="flex gap-2">
                       <Button
-                        className="w-full"
                         variant="outline"
-                        onClick={() => setShowInspectorReject(true)}
-                        disabled={selectedInvoice ? rowLoading.has(selectedInvoice.id) : true}
+                        size="sm"
+                        className="w-full"
+                        onClick={() => setShowInspectorReject(false)}
                       >
-                        <X size={14} />
-                        Reject invoice
+                        Cancel
                       </Button>
-                    ) : (
-                      <div className="space-y-2">
-                        <textarea
-                          value={inspectorRejectReason}
-                          onChange={(event) => setInspectorRejectReason(event.target.value)}
-                          placeholder="Rejection reason (optional)"
-                          rows={3}
-                          className="w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-xs text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
-                        />
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full"
-                            onClick={() => setShowInspectorReject(false)}
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            className="w-full"
-                            onClick={() => {
-                              if (selectedInvoice) {
-                                void handleReject(selectedInvoice, inspectorRejectReason)
-                              }
-                              setShowInspectorReject(false)
-                              setInspectorRejectReason('')
-                            }}
-                            disabled={
-                              !!selectedInvoice && rowLoading.has(selectedInvoice.id)
-                            }
-                          >
-                            Submit reject
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-
-                    {selectedInvoice?.userId ? (
-                      <Link
-                        to="/contractors/$userId"
-                        params={{ userId: selectedInvoice.userId }}
-                        className="block"
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => {
+                          void handleReject(
+                            selectedInvoice,
+                            inspectorRejectReason,
+                          )
+                          setShowInspectorReject(false)
+                          setInspectorRejectReason('')
+                        }}
+                        disabled={rowLoading.has(selectedInvoice.id)}
                       >
-                        <Button
-                          className="w-full"
-                          variant="ghost"
-                          size="sm"
-                          onClick={(event) => event.preventDefault()}
-                        >
-                          <Clock3 size={12} />
-                          View contractor
-                        </Button>
-                      </Link>
-                    ) : null}
+                        Submit reject
+                      </Button>
+                    </div>
+                  </div>
+                )}
 
+                <div className="flex gap-2">
+                  {selectedInvoice.userId && (
                     <Link
-                      to="/invoices/$id"
-                      params={{ id: selectedInvoice.id }}
-                      className="block"
+                      to="/contractors/$userId"
+                      params={{ userId: selectedInvoice.userId }}
+                      className="block flex-1"
                     >
-                      <Button className="w-full" variant="outline" size="sm">
-                        <ExternalLink size={12} />
-                        Open full invoice
+                      <Button className="w-full" variant="ghost" size="sm">
+                        <Clock3 size={12} />
+                        View contractor
                       </Button>
                     </Link>
-                  </>
-                ) : null}
+                  )}
+                  <Link
+                    to="/invoices/$id"
+                    params={{ id: selectedInvoice.id }}
+                    className="block flex-1"
+                  >
+                    <Button className="w-full" variant="ghost" size="sm">
+                      <ExternalLink size={12} />
+                      Open full invoice
+                    </Button>
+                  </Link>
+                </div>
               </div>
-            </div>
-          </div>
-        </aside>
+            )}
+          </DrawerContent>
+        </Drawer>
       </div>
     </AdminLayout>
   )

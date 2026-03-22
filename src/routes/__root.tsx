@@ -28,10 +28,14 @@ const fetchSession = createServerFn({ method: 'GET' }).handler(async () => {
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   beforeLoad: async () => {
-    const session = await fetchSession()
-
-    return {
-      session,
+    try {
+      const session = await fetchSession()
+      return { session }
+    } catch {
+      // Server function references can break transiently during HMR.
+      // Return null session so the page renders instead of crashing;
+      // the next navigation or full reload will restore it.
+      return { session: null }
     }
   },
   head: () => ({

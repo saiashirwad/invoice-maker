@@ -100,6 +100,13 @@ html {
   scrollbar-gutter: stable;
 }
 
+/* Radix Dialog adds inline padding-right to compensate for scrollbar removal,
+   but scrollbar-gutter: stable already reserves that space. Neutralize it. */
+body[data-scroll-locked] {
+  padding-right: 0 !important;
+  margin-right: 0 !important;
+}
+
 body {
   margin: 0;
   color: var(--foreground);
@@ -182,12 +189,7 @@ a {
     background-color 150ms ease,
     color 150ms ease,
     border-color 150ms ease,
-    opacity 150ms ease,
-    transform 150ms ease;
-}
-
-button:active:not(:disabled) {
-  transform: scale(0.97);
+    opacity 150ms ease;
 }
 
 /* Check draw animation */

@@ -8,7 +8,6 @@ export function AdminLayout({
   processedCount,
   userCount,
   wideCanvas,
-  utility,
 }: {
   children: ReactNode
   title?: string
@@ -16,7 +15,6 @@ export function AdminLayout({
   processedCount?: number
   userCount?: number
   wideCanvas?: boolean
-  utility?: ReactNode
 }) {
   return (
     <AdminShell
@@ -25,7 +23,6 @@ export function AdminLayout({
       processedCount={processedCount}
       userCount={userCount}
       wideCanvas={wideCanvas}
-      utility={utility}
     >
       {children}
     </AdminShell>

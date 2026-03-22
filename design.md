@@ -13,9 +13,11 @@ Use this file for the design language, tokens, component rules, and interaction 
    Dense enough for fast work, but never visually noisy or cramped.
 3. One vocabulary.
    Components, color meaning, and interaction patterns should be learnable once and reused everywhere.
-4. Numbers win.
+4. Monochrome first.
+   The interface should rely on value, contrast, spacing, and type before color. Strong color should appear only in rare cases where meaning would otherwise be missed.
+5. Numbers win.
    In financial rows and summaries, amounts must carry equal or greater weight than names and metadata.
-5. Motion is information.
+6. Motion is information.
    Animation should explain state changes, not decorate the surface.
 
 ## Layout And Reading Context
@@ -29,7 +31,7 @@ Use this file for the design language, tokens, component rules, and interaction 
 - Low-count states must still feel deliberate.
   Avoid the current large white void when only a few items are present.
 - Summary modules should not create a separate reading context through dark inversion.
-  Prefer white surfaces with stronger type and restrained accents.
+  Prefer white surfaces with stronger type and restrained grayscale contrast.
 
 ### Shell Structure
 
@@ -125,16 +127,16 @@ Column alignment should be stable across ledger-like views:
 
 ### Text Colors
 
-| Token            | Hex       | Usage                                |
-| ---------------- | --------- | ------------------------------------ |
-| `text-primary`   | `#1A1A1A` | names, amounts, headings             |
-| `text-secondary` | `#6B6B6B` | dates, labels, metadata              |
-| `text-tertiary`  | `#9C9C9C` | low-emphasis annotations             |
-| `text-disabled`  | `#BFBFBF` | disabled controls, placeholders      |
-| `text-inverse`   | `#FFFFFF` | text on dark surfaces if ever needed |
-| `text-link`      | `#5E6AD2` | links and linked IDs                 |
-| `text-success`   | `#059669` | positive state detail                |
-| `text-danger`    | `#DC2626` | destructive or rejected detail       |
+| Token            | Hex       | Usage                                                           |
+| ---------------- | --------- | --------------------------------------------------------------- |
+| `text-primary`   | `#1A1A1A` | names, amounts, headings                                        |
+| `text-secondary` | `#6B6B6B` | dates, labels, metadata                                         |
+| `text-tertiary`  | `#9C9C9C` | low-emphasis annotations                                        |
+| `text-disabled`  | `#BFBFBF` | disabled controls, placeholders                                 |
+| `text-inverse`   | `#FFFFFF` | text on dark surfaces if ever needed                            |
+| `text-link`      | `#2E2E2E` | links and linked IDs                                            |
+| `text-success`   | `#1A1A1A` | positive state detail when neutral treatment is enough          |
+| `text-danger`    | `#1A1A1A` | destructive or rejected detail when neutral treatment is enough |
 
 ## Color System
 
@@ -153,34 +155,28 @@ Column alignment should be stable across ledger-like views:
 
 ### Accent Tokens
 
-Use indigo-violet as the primary interaction accent. Do not use green as the app-wide accent because green is reserved for success and approval meaning.
+Default to monochrome interaction treatment. Accent color is not part of the everyday visual language. Use grayscale values for focus, selection, and active state unless a rare high-importance exception truly benefits from color.
 
 | Token                   | Hex       | Usage                                  |
 | ----------------------- | --------- | -------------------------------------- |
-| `accent-primary`        | `#5E6AD2` | primary interaction color              |
-| `accent-primary-hover`  | `#4F5ABF` | hover                                  |
-| `accent-primary-active` | `#4750A8` | pressed state                          |
-| `accent-primary-subtle` | `#EDEDFC` | selected rows, active chip backgrounds |
-| `accent-primary-muted`  | `#C5C8F0` | subtle progress or supporting emphasis |
+| `accent-primary`        | `#1F1F1F` | primary interaction emphasis           |
+| `accent-primary-hover`  | `#141414` | hover                                  |
+| `accent-primary-active` | `#0F0F0F` | pressed state                          |
+| `accent-primary-subtle` | `#F1F1EF` | selected rows, active chip backgrounds |
+| `accent-primary-muted`  | `#D8D8D4` | subtle supporting emphasis             |
 
 ### Status Tokens
 
-Keep semantic meanings distinct:
-
-- approved is green
-- paid is teal
-- rejected is red
-- pending or submitted is amber
-- draft is neutral
+Keep semantic meanings distinct, but do not default to loud color fills. Most status expression should come from label, shape, iconography, and tonal contrast. Strong status color should be reserved for the rarest cases where the risk of confusion is materially high.
 
 | Status              | Dot       | Text      | Background |
 | ------------------- | --------- | --------- | ---------- |
-| Approved            | `#2DA44E` | `#1A7F37` | `#DAFBE1`  |
-| Rejected            | `#CF222E` | `#CF222E` | `#FFEBE9`  |
-| Paid                | `#1B7C83` | `#1B7C83` | `#DDF4F6`  |
-| Submitted / Pending | `#BF8700` | `#9A6700` | `#FFF8C5`  |
+| Approved            | `#3A3A3A` | `#1A1A1A` | `#F1F1EF`  |
+| Rejected            | `#3A3A3A` | `#1A1A1A` | `#F1F1EF`  |
+| Paid                | `#3A3A3A` | `#1A1A1A` | `#F1F1EF`  |
+| Submitted / Pending | `#3A3A3A` | `#1A1A1A` | `#F1F1EF`  |
 | Draft               | `#8B8B8B` | `#6B6B6B` | `#F0F0EE`  |
-| Outstanding         | `#E57A1A` | `#C45D00` | `#FFF3E0`  |
+| Outstanding         | `#3A3A3A` | `#1A1A1A` | `#F1F1EF`  |
 
 ### Role Tokens
 
@@ -192,16 +188,16 @@ Keep semantic meanings distinct:
 
 ### Interactive Tokens
 
-| Token                     | Hex                     | Usage                   |
-| ------------------------- | ----------------------- | ----------------------- |
-| `interactive-hover-bg`    | `#F5F5F4`               | row hover               |
-| `interactive-active-bg`   | `#EDEDFC`               | selected state          |
-| `interactive-focus-ring`  | `rgba(94,106,210,0.40)` | focus ring              |
-| `button-primary-bg`       | `#5E6AD2`               | primary actions         |
-| `button-secondary-border` | `#D4D4D1`               | secondary buttons       |
-| `button-danger-bg`        | `#CF222E`               | destructive buttons     |
-| `chip-active-bg`          | `#EDEDFC`               | active filter chips     |
-| `chip-active-text`        | `#4750A8`               | active filter chip text |
+| Token                     | Hex                   | Usage                   |
+| ------------------------- | --------------------- | ----------------------- |
+| `interactive-hover-bg`    | `#F5F5F4`             | row hover               |
+| `interactive-active-bg`   | `#F1F1EF`             | selected state          |
+| `interactive-focus-ring`  | `rgba(26,26,26,0.18)` | focus ring              |
+| `button-primary-bg`       | `#1F1F1F`             | primary actions         |
+| `button-secondary-border` | `#D4D4D1`             | secondary buttons       |
+| `button-danger-bg`        | `#CF222E`             | destructive buttons     |
+| `chip-active-bg`          | `#F1F1EF`             | active filter chips     |
+| `chip-active-text`        | `#1A1A1A`             | active filter chip text |
 
 ## Shared Component Vocabulary
 
@@ -227,17 +223,17 @@ Rules:
 
 Use one vocabulary:
 
-| Variant        | Structure                     | Use                        |
-| -------------- | ----------------------------- | -------------------------- |
-| `status`       | dot + label in semantic color | invoice status             |
-| `label`        | colored fill pill             | roles or taxonomy labels   |
-| `entity`       | outlined pill                 | SV / LP entity             |
-| `count`        | neutral pill                  | counts in nav or tabs      |
-| `notification` | small dot                     | needs-attention indicators |
+| Variant        | Structure                                 | Use                        |
+| -------------- | ----------------------------------------- | -------------------------- |
+| `status`       | dot + label in restrained tonal treatment | invoice status             |
+| `label`        | neutral fill pill                         | roles or taxonomy labels   |
+| `entity`       | outlined pill                             | SV / LP entity             |
+| `count`        | neutral pill                              | counts in nav or tabs      |
+| `notification` | small dot                                 | needs-attention indicators |
 
 Rules:
 
-- Do not mix plain colored text, dots, and pills for the same semantic concept
+- Do not mix plain text, dots, and pills for the same semantic concept
 - Entity tags must not visually read like statuses
 - Status treatment should be consistent across review, processed, users, and detail views
 
@@ -296,9 +292,7 @@ Tabs:
 
 Route context band:
 
-- acts as the working header for a page
-- can remain sticky when that improves orientation on long pages
-- should prioritize counts, state, and actions over descriptive prose
+- **Removed.** No top context band on any admin route. Route-level context (counts, labels, actions) should live inside the page content, not a shell-level band.
 
 ### List Rows
 

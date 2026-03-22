@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { StatusBadge } from './StatusBadge'
 
 export const invoiceRowClass =
-  'flex w-full items-center justify-between gap-4 border-l-2 border-l-[var(--background)] pl-2.5 py-4 text-left transition-all hover:bg-[var(--accent)] hover:shadow-[0_1px_2px_rgba(0,0,0,0.04)] focus-visible:bg-[var(--accent)] [outline:none] [box-shadow:none]'
+  'flex w-full items-center justify-between gap-4 border-l-2 border-l-[var(--background)] pl-2.5 py-4 text-left [outline:none] [box-shadow:none]'
 
 export function formatInvoiceDate(timestamp: number | Date | null): string {
   if (!timestamp) return ''

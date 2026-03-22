@@ -6,6 +6,8 @@ import {
   count,
   desc,
   eq,
+  max,
+  sum,
   gte,
   inArray,
   lt,
@@ -18,7 +20,7 @@ import { getDb } from './db-middleware'
 import { getServerSession } from './auth'
 import { invoice, lineItem, invoiceNumberSequence } from '#/db/schema/invoice'
 import { category as categoryTable } from '#/db/schema/category'
-import { entity, userProfile  } from '#/db/schema/entity'
+import { entity, userProfile } from '#/db/schema/entity'
 import { user } from '#/db/schema/auth'
 import { auditLog } from '#/db/schema/audit'
 import {
@@ -532,6 +534,169 @@ export const listPendingInvoices = createServerFn({ method: 'GET' }).handler(
   },
 )
 
+const PROCESSED_FILTERED_STATUSES = ['approved', 'rejected', 'paid'] as const
+
+type ProcessedInvoiceSortBy = 'date' | 'amount' | 'user'
+type ProcessedInvoiceSortDir = 'asc' | 'desc'
+
+type ProcessedInvoiceFilterArgs = {
+  status?: string
+  userId?: string
+  category?: string
+  dateFrom?: string
+  dateTo?: string
+}
+
+function buildProcessedInvoiceFilters(data: ProcessedInvoiceFilterArgs) {
+  const conditions = [ne(invoice.status, 'draft')]
+
+  if (data.status && data.status !== 'all') {
+    conditions.push(eq(invoice.status, data.status))
+  } else {
+    conditions.push(
+      or(
+        eq(invoice.status, PROCESSED_FILTERED_STATUSES[0]),
+        eq(invoice.status, PROCESSED_FILTERED_STATUSES[1]),
+        eq(invoice.status, PROCESSED_FILTERED_STATUSES[2]),
+      )!,
+    )
+  }
+
+  if (data.userId) {
+    conditions.push(eq(invoice.userId, data.userId))
+  }
+
+  if (data.category) {
+    conditions.push(eq(invoice.category, data.category))
+  }
+
+  if (data.dateFrom) {
+    conditions.push(
+      gte(invoice.invoiceDate, new Date(data.dateFrom + 'T00:00:00')),
+    )
+  }
+
+  if (data.dateTo) {
+    conditions.push(
+      lte(invoice.invoiceDate, new Date(data.dateTo + 'T23:59:59')),
+    )
+  }
+
+  return conditions
+}
+
+type ProcessedInvoiceSummary = {
+  totalCount: number
+  statusCounts: {
+    all: number
+    approved: number
+    rejected: number
+    paid: number
+  }
+  currencyTotals: Array<{
+    currencyCode: string
+    count: number
+    totalCents: number
+  }>
+  entityTotals: Array<{
+    entityId: string
+    entityName: string
+    count: number
+  }>
+}
+
+export const getProcessedInvoiceSummary = createServerFn({
+  method: 'GET',
+}).handler(
+  async ({
+    data,
+  }: {
+    data: {
+      status?: string
+      userId?: string
+      category?: string
+      dateFrom?: string
+      dateTo?: string
+    }
+  }) => {
+    const session = await getServerSession(getRequest())
+    if (!session?.user) throw new Error('Unauthorized')
+
+    const actor = session.user as { id: string; role?: string }
+    if (actor.role !== 'admin') throw new Error('Forbidden')
+
+    const db = getDb()
+    const conditions = buildProcessedInvoiceFilters(data)
+
+    const totalRow = await db
+      .select({ total: count() })
+      .from(invoice)
+      .where(and(...conditions))
+      .get()
+    const totalCount = Number(totalRow?.total ?? 0)
+
+    const statusRows = await db
+      .select({
+        status: invoice.status,
+        count: count(),
+      })
+      .from(invoice)
+      .where(and(...conditions))
+      .groupBy(invoice.status)
+    const statusCounts: ProcessedInvoiceSummary['statusCounts'] = {
+      all: totalCount,
+      approved: 0,
+      rejected: 0,
+      paid: 0,
+    }
+    for (const row of statusRows) {
+      if (
+        row.status === 'approved' ||
+        row.status === 'rejected' ||
+        row.status === 'paid'
+      ) {
+        statusCounts[row.status] = Number(row.count)
+      }
+    }
+
+    const currencyRows = await db
+      .select({
+        currencyCode: invoice.currencyCode,
+        count: count(),
+        totalCents: sum(invoice.grandTotalCents),
+      })
+      .from(invoice)
+      .where(and(...conditions))
+      .groupBy(invoice.currencyCode)
+
+    const entityRows = await db
+      .select({
+        entityId: invoice.entityId,
+        entityName: sql<string>`COALESCE(${entity.name}, 'Unknown')`,
+        count: count(),
+      })
+      .from(invoice)
+      .leftJoin(entity, eq(invoice.entityId, entity.id))
+      .where(and(...conditions))
+      .groupBy(invoice.entityId, entity.name)
+
+    return {
+      totalCount,
+      statusCounts,
+      currencyTotals: currencyRows.map((row) => ({
+        currencyCode: row.currencyCode,
+        count: Number(row.count),
+        totalCents: Number(row.totalCents),
+      })),
+      entityTotals: entityRows.map((row) => ({
+        entityId: row.entityId,
+        entityName: row.entityName,
+        count: Number(row.count),
+      })),
+    } satisfies ProcessedInvoiceSummary
+  },
+)
+
 // ─── List Processed Invoices (admin, paginated) ─────────────────────
 
 const PROCESSED_PAGE_SIZE = 25
@@ -548,8 +713,8 @@ export const listProcessedInvoices = createServerFn({ method: 'GET' }).handler(
       category?: string
       dateFrom?: string // ISO date string YYYY-MM-DD
       dateTo?: string // ISO date string YYYY-MM-DD
-      sortBy?: 'date' | 'amount' | 'user'
-      sortDir?: 'asc' | 'desc'
+      sortBy?: ProcessedInvoiceSortBy
+      sortDir?: ProcessedInvoiceSortDir
     }
   }) => {
     const session = await getServerSession(getRequest())
@@ -561,54 +726,9 @@ export const listProcessedInvoices = createServerFn({ method: 'GET' }).handler(
     const db = getDb()
     const limit = data.limit ?? PROCESSED_PAGE_SIZE
 
-    const conditions = [ne(invoice.status, 'draft')]
-
-    // Status filter
-    if (data.status && data.status !== 'all') {
-      conditions.push(eq(invoice.status, data.status))
-    } else {
-      conditions.push(
-        or(
-          eq(invoice.status, 'approved'),
-          eq(invoice.status, 'rejected'),
-          eq(invoice.status, 'paid'),
-        )!,
-      )
-    }
-
-    // User filter
-    if (data.userId) {
-      conditions.push(eq(invoice.userId, data.userId))
-    }
-
-    // Category filter
-    if (data.category) {
-      conditions.push(eq(invoice.category, data.category))
-    }
-
-    // Date range filter (on invoiceDate)
-    if (data.dateFrom) {
-      conditions.push(
-        gte(invoice.invoiceDate, new Date(data.dateFrom + 'T00:00:00')),
-      )
-    }
-    if (data.dateTo) {
-      conditions.push(
-        lte(invoice.invoiceDate, new Date(data.dateTo + 'T23:59:59')),
-      )
-    }
-
-    // Cursor-based pagination: cursor is "createdAt:id"
-    if (data.cursor) {
-      const [cursorTs, cursorId] = data.cursor.split(':')
-      const ts = Number(cursorTs)
-      conditions.push(
-        or(
-          lt(invoice.createdAt, ts),
-          and(eq(invoice.createdAt, ts), lt(invoice.id, cursorId)),
-        )!,
-      )
-    }
+    const conditions = buildProcessedInvoiceFilters(data)
+    const offset = data.cursor ? Number(data.cursor) : 0
+    const safeOffset = Number.isFinite(offset) && offset > 0 ? offset : 0
 
     // Sort
     const sortDir = data.sortDir === 'asc' ? asc : desc
@@ -617,7 +737,7 @@ export const listProcessedInvoices = createServerFn({ method: 'GET' }).handler(
         ? invoice.grandTotalCents
         : data.sortBy === 'user'
           ? user.name
-          : invoice.createdAt
+          : invoice.invoiceDate
 
     // Fetch limit + 1 to know if there are more
     const results = await db
@@ -640,20 +760,21 @@ export const listProcessedInvoices = createServerFn({ method: 'GET' }).handler(
         userName: user.name,
         entityId: invoice.entityId,
         entityName: entity.name,
+        notes: invoice.notes,
+        bankDetails: invoice.bankDetails,
       })
       .from(invoice)
       .leftJoin(user, eq(invoice.userId, user.id))
       .leftJoin(entity, eq(invoice.entityId, entity.id))
       .where(and(...conditions))
-      .orderBy(sortDir(sortColumn), desc(invoice.id))
+      .orderBy(sortDir(sortColumn), sortDir(invoice.id))
+      .offset(safeOffset)
       .limit(limit + 1)
 
     const hasMore = results.length > limit
     const items = hasMore ? results.slice(0, limit) : results
     const nextCursor =
-      hasMore && items.length > 0
-        ? `${items[items.length - 1].createdAt}:${items[items.length - 1].id}`
-        : null
+      hasMore && items.length > 0 ? `${safeOffset + limit}` : null
 
     return { items, nextCursor, hasMore }
   },
@@ -703,11 +824,56 @@ export const listCategories = createServerFn({ method: 'GET' }).handler(
           SELECT COUNT(*) FROM ${invoice}
           WHERE ${invoice.category} = ${categoryTable.name}
         )`.as('invoice_count'),
+        lastUsedAt: sql<number | null>`(
+          SELECT MAX(${invoice.createdAt}) FROM ${invoice}
+          WHERE ${invoice.category} = ${categoryTable.name}
+        )`.as('last_used_at'),
+        defaultProfileCount: sql<number>`(
+          SELECT COUNT(*) FROM ${userProfile}
+          WHERE ${userProfile.defaultCategory} = ${categoryTable.name}
+        )`.as('default_profile_count'),
       })
       .from(categoryTable)
       .orderBy(asc(categoryTable.sortOrder))
 
     return results
+  },
+)
+
+export const getCategoryOverview = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    const session = await getServerSession(getRequest())
+    if (!session?.user) throw new Error('Unauthorized')
+
+    const actor = session.user as { id: string; role?: string }
+    if (actor.role !== 'admin') throw new Error('Forbidden')
+
+    const db = getDb()
+
+    const [allInvoices, uncategorizedInvoices, defaultsSet] = await Promise.all([
+      db
+        .select({ count: count() })
+        .from(invoice)
+        .get(),
+      db
+        .select({ count: count() })
+        .from(invoice)
+        .where(
+          sql`(${invoice.category} IS NULL OR ${invoice.category} = '')`,
+        )
+        .get(),
+      db
+        .select({ count: count() })
+        .from(userProfile)
+        .where(sql`${userProfile.defaultCategory} IS NOT NULL`)
+        .get(),
+    ])
+
+    return {
+      totalInvoices: allInvoices?.count ?? 0,
+      uncategorizedInvoices: uncategorizedInvoices?.count ?? 0,
+      usersWithDefaultCategory: defaultsSet?.count ?? 0,
+    }
   },
 )
 
@@ -775,9 +941,31 @@ export const deleteCategory = createServerFn({ method: 'POST' }).handler(
     if (actor.role !== 'admin') throw new Error('Forbidden')
 
     const db = getDb()
+    const target = await db
+      .select({ name: categoryTable.name })
+      .from(categoryTable)
+      .where(eq(categoryTable.id, data.id))
+      .get()
+
+    if (!target) throw new Error('Category not found')
+
+    const affected =
+      (await db
+        .select({ count: count() })
+        .from(invoice)
+        .where(eq(invoice.category, target.name))
+        .get())?.count ?? 0
+
+    if (affected > 0) {
+      await db
+        .update(invoice)
+        .set({ category: null })
+        .where(eq(invoice.category, target.name))
+    }
+
     await db.delete(categoryTable).where(eq(categoryTable.id, data.id))
 
-    return { ok: true }
+    return { ok: true, affectedInvoiceCount: affected }
   },
 )
 
@@ -1130,15 +1318,20 @@ export const listAllUsers = createServerFn({ method: 'GET' }).handler(
       .select({
         userId: invoice.userId,
         count: count(),
+        lastInvoiceAt: max(invoice.createdAt),
       })
       .from(invoice)
       .groupBy(invoice.userId)
 
     const countMap = new Map(invoiceCounts.map((r) => [r.userId, r.count]))
+    const activityMap = new Map(
+      invoiceCounts.map((r) => [r.userId, r.lastInvoiceAt ?? null]),
+    )
 
     return results.map((u) => ({
       ...u,
       invoiceCount: countMap.get(u.id) ?? 0,
+      lastInvoiceAt: activityMap.get(u.id) ?? null,
     }))
   },
 )
@@ -1236,7 +1429,7 @@ export const updateUser = createServerFn({ method: 'POST' }).handler(
     if (data.role !== undefined) updates.role = data.role
     if (data.entityId !== undefined) updates.entityId = data.entityId || null
     if (data.invoicePrefix !== undefined)
-      updates.invoicePrefix = data.invoicePrefix?.trim() || null
+      updates.invoicePrefix = data.invoicePrefix.trim() || null
 
     await db.update(user).set(updates).where(eq(user.id, data.id))
 

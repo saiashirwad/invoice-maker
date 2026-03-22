@@ -16,6 +16,8 @@ Notes for this checklist:
 - Do not aggregate mixed currencies into one fake total.
 - Prefer persistent inspectors and side sheets over modal-first detail flows.
 - Optimize for scan speed on dense admin screens.
+- Keep the visual language monochrome for the vast majority of the UI.
+- Do not introduce color unless it is genuinely necessary to prevent a meaningful state or risk from being missed.
 - Preserve the underlying workflow semantics while improving framing and interaction clarity.
 
 ## P0 Foundation
@@ -24,10 +26,10 @@ Notes for this checklist:
 
 - [x] Replace the current thin admin frame with a stronger shell.
       Target: `src/components/AdminLayout.tsx`
-- [x] Add a compact route context band with route label, operational counts, active state, and room for primary controls.
+- [x] ~~Add a compact route context band with route label, operational counts, active state, and room for primary controls.~~ **Removed — no top context band on any admin route. Route context lives in the page content, not a shell-level band.**
 - [x] Widen and quiet the left rail so navigation, page grouping, and entity legend have deliberate space.
 - [x] Establish a consistent content canvas that can support split panes, wide ledgers, and summary rows.
-- [x] Add a right-side utility zone in the context band for date context, sync state, or future global filters.
+- [x] ~~Add a right-side utility zone in the context band for date context, sync state, or future global filters.~~ **Removed with context band.**
 
 ### Shared Design System
 
@@ -36,7 +38,7 @@ Notes for this checklist:
   - Define all components in/under `src/components/admin/` and reuse them via route files, do not create one-off replacements in routes.
 - [x] Create or refactor the following primitives and their responsibilities:
   - `AdminShell` (layout shell): 240px rail, contextual breadcrumbs, page max width controls, route-level sticky context band, right utility cluster.
-  - `AdminContextBand` (top working header): route label, entity/tally pills, sync/refresh state, action slot, optional date scope label.
+  - ~~`AdminContextBand` (top working header)~~: **Removed. No top context band anywhere. Route-level context (counts, labels, actions) should live inside the page content itself, not a shell-level band.**
   - `AdminSummaryCard` (metric surface): consistent padding (`space-6`), non-inverted tonal treatment, title + primary/secondary value lines, optional trend/caveat footer.
   - `AdminToolbar` (control row): search + primary filters + segmented controls + actions in one 52px band, no fragmented UI islands.
   - `SectionHeading` (section title group): left title, optional helper line, optional action and secondary action.
@@ -51,9 +53,10 @@ Notes for this checklist:
   - Apply `font-variant-numeric: tabular-nums` in all monetary/date-dense cells.
   - Keep dates and names in proportional font (`Inter`) for quick parsing.
 - [x] Standardize color and meaning tokens:
-  - Entity chips use `Role Tokens` values from `design.md`.
+  - Default to grayscale and monochrome treatment across shared admin surfaces.
+  - Entity chips use restrained neutral treatment from `design.md`, not decorative accent color.
   - Status is only represented through `StatusChip`, never plain icon-only status text.
-  - Caution states must use amber semantics only (`outstanding`, `aging`, `anomaly`) and never borrow approval/paid green.
+  - Caution states should first rely on copy, iconography, and tonal contrast; use color only in the rare cases where neutral treatment is not clear enough.
 - [x] Badge/tag vocabulary and consistent use:
   - Use pills for entity, role, category, and counts.
   - Use dot+label status chips only for lifecycle states.
@@ -70,7 +73,8 @@ Notes for this checklist:
 - [x] Contrast and surfaces:
   - Keep cards/drawers on light surfaces (`bg-surface`/`bg-surface-sunken`) with restrained borders.
   - Do not introduce near-black/near-white inversion except in dedicated contrast modules used across a full route.
-  - If emphasis is needed, use spacing, type weight, and accent tokens before tonal inversion.
+  - If emphasis is needed, use spacing, type weight, and grayscale contrast before any color.
+  - Treat saturated color as an exception path, not a standard emphasis tool.
 - [x] Action hierarchy:
   - One filled/primary control per working region.
   - Secondary actions are outlined; tertiary actions are ghost/text.
@@ -94,8 +98,6 @@ Notes for this checklist:
 Target route: `src/routes/admin/index.tsx`
 
 ### Layout
-
-- [ ] Replace the current narrow list-first page with a split-pane triage workspace.
 - [ ] Add a summary band above the queue with:
   - pending invoice count
   - totals by currency
@@ -148,25 +150,23 @@ Target route: `src/routes/admin/processed.tsx`
 
 ### Layout
 
-- [ ] Rebuild the page as a ledger instead of a long stack of clickable rows.
-- [ ] Add a stronger top control band with result count, active date window, and room for later export or saved views.
-- [ ] Add a summary rail for counts by status, totals by currency, and entity split.
+- [x] Rebuild the page as a ledger instead of a long stack of clickable rows.
+- [x] Add a stronger top control band with result count, active date window, and room for later export or saved views.
+- [x] Add a summary rail for counts by status, totals by currency, and entity split.
 
-### Filters
-
-- [ ] Consolidate status, contractor, category, date range, and sort into one cohesive toolbar.
-- [ ] Show active filters as readable chips below the toolbar.
-- [ ] Add a clear result sentence describing the current dataset.
-- [ ] Make the filter state feel like a mode, not a loose row of pills.
-- [ ] Keep filter state bookmarkable and shareable through URL params.
-- [ ] Persist last-used filters where it improves repeat admin workflows without obscuring the current state.
-- [ ] Replace the current `Load more` ambiguity with visible dataset scope.
+- [x] Consolidate status, contractor, category, date range, and sort into one cohesive toolbar.
+- [x] Show active filters as readable chips below the toolbar.
+- [x] Add a clear result sentence describing the current dataset.
+- [x] Make the filter state feel like a mode, not a loose row of pills.
+- [x] Keep filter state bookmarkable and shareable through URL params.
+- [x] Persist last-used filters where it improves repeat admin workflows without obscuring the current state.
+- [x] Replace the current `Load more` ambiguity with visible dataset scope.
       Keep result count visible near the working area and show progress like `showing 26 of 29` when pagination remains.
 
 ### Ledger Table
 
-- [ ] Replace the stacked rows with a dense table or ledger grid.
-- [ ] Include columns for:
+- [x] Replace the stacked rows with a dense table or ledger grid.
+- [x] Include columns for:
   - invoice ID
   - contractor
   - entity
@@ -174,21 +174,22 @@ Target route: `src/routes/admin/processed.tsx`
   - invoice date
   - status
   - amount
-- [ ] Keep the table header sticky.
-- [ ] Open row details in a right-side drawer instead of a modal.
-- [ ] Use restrained status color and monospace metric cells.
+- [x] Keep the table header sticky.
+- [x] Open row details in a right-side drawer instead of a modal.
+- [x] Use restrained status color and monospace metric cells.
+- [x] Keep the processed ledger visually monochrome unless a rare compliance or risk cue truly requires color.
 
 ### Currency Handling
 
-- [ ] Remove any single-summary pattern that derives currency from the first visible row.
-- [ ] Show grouped totals by currency in the summary layer.
-- [ ] Preserve per-currency reporting when filters return mixed-currency data.
+- [x] Remove any single-summary pattern that derives currency from the first visible row.
+- [x] Show grouped totals by currency in the summary layer.
+- [x] Preserve per-currency reporting when filters return mixed-currency data.
 
 ### Done When
 
-- [ ] The route reads like a trustworthy ledger rather than a long inbox.
-- [ ] Filter state is legible at a glance.
-- [ ] No mixed-currency result set is summarized as one misleading total.
+- [x] The route reads like a trustworthy ledger rather than a long inbox.
+- [x] Filter state is legible at a glance.
+- [x] No mixed-currency result set is summarized as one misleading total.
 
 ## P3 Team And Access
 
@@ -196,15 +197,15 @@ Target route: `src/routes/admin/users.tsx`
 
 ### Layout
 
-- [ ] Reframe the page as access management, not a compact contact list.
-- [ ] Add a stronger top control band with role and entity summaries plus a primary `Invite User` action.
-- [ ] Add summary cards for contractors, admins, accountants, and any missing assignments.
+- [x] Reframe the page as access management, not a compact contact list.
+- [x] Add a stronger top control band with role and entity summaries plus a primary `Invite User` action.
+- [x] Add summary cards for contractors, admins, accountants, and any missing assignments.
 
 ### Filters And Table
 
-- [ ] Keep search, but redesign role filtering as a clearer segmented control.
-- [ ] Add an entity filter.
-- [ ] Replace flattened rows with a management table that includes:
+- [x] Keep search, but redesign role filtering as a clearer segmented control.
+- [x] Add an entity filter.
+- [x] Replace flattened rows with a management table that includes:
   - name
   - role
   - entity
@@ -216,10 +217,10 @@ Target route: `src/routes/admin/users.tsx`
 
 ### Interaction
 
-- [ ] Move add and edit flows into a right-side sheet.
-- [ ] Make row hover and row click behavior obvious, especially where contractors and admins differ today.
-- [ ] Standardize visual treatment for contractors, admins, and accountants even if their destination flows differ.
-- [ ] Add cleaner empty and filtered states.
+- [x] Move add and edit flows into a right-side sheet.
+- [x] Make row hover and row click behavior obvious, especially where contractors and admins differ today.
+- [x] Standardize visual treatment for contractors, admins, and accountants even if their destination flows differ.
+- [x] Add cleaner empty and filtered states.
 
 ### Done When
 

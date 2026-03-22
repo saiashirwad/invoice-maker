@@ -1,21 +1,15 @@
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { Link, useLocation } from '@tanstack/react-router'
 import { ClipboardCheck, Archive, Tag, Users, BarChart3 } from 'lucide-react'
 import { Route as RootRoute } from '@/routes/__root'
 import { UserMenu } from '@/components/UserMenu'
-import { AdminContextBand } from './AdminContextBand'
-import { EntityChip } from './EntityChip'
+
 
 interface NavItem {
   to: string
   label: string
   icon: typeof ClipboardCheck
   badge?: number | string
-}
-
-interface ContextMetric {
-  label: string
-  value: string | number
 }
 
 const routeLabels: Record<string, string> = {
@@ -64,58 +58,6 @@ const navSections: { title: string; items: NavItem[] }[] = [
   },
 ]
 
-function getContextMetrics({
-  path,
-  pendingCount,
-  processedCount,
-  userCount,
-}: {
-  path: string
-  pendingCount?: number
-  processedCount?: number
-  userCount?: number
-}): ContextMetric[] {
-  if (path === '/admin') {
-    return [
-      { label: 'Pending', value: pendingCount ?? 0 },
-      { label: 'Processed', value: processedCount ?? 0 },
-    ]
-  }
-
-  if (path === '/admin/processed') {
-    return [
-      { label: 'Total records', value: processedCount ?? 0 },
-      { label: 'View mode', value: 'Active' },
-    ]
-  }
-
-  if (path === '/admin/users') {
-    return [
-      { label: 'Users', value: userCount ?? 0 },
-      { label: 'Entities', value: 'SV / LP' },
-    ]
-  }
-
-  return [{ label: 'Entity', value: 'SV / LP' }]
-}
-
-function getPathBadge(path: string): string {
-  if (path === '/admin') return 'review'
-  if (path === '/admin/processed') return 'processed'
-  if (path === '/admin/categories') return 'taxonomy'
-  if (path === '/admin/users') return 'access'
-  return 'reporting'
-}
-
-function getTimestampLabel() {
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date())
-}
-
 type AdminShellProps = {
   children: ReactNode
   title?: string
@@ -123,7 +65,6 @@ type AdminShellProps = {
   processedCount?: number
   userCount?: number
   wideCanvas?: boolean
-  utility?: ReactNode
 }
 
 export function AdminShell({
@@ -132,7 +73,6 @@ export function AdminShell({
   processedCount,
   userCount,
   wideCanvas = false,
-  utility,
   title,
 }: AdminShellProps) {
   const { session } = RootRoute.useRouteContext()
@@ -141,14 +81,6 @@ export function AdminShell({
   const normalizedPath =
     path.endsWith('/') && path.length > 1 ? path.slice(0, -1) : path
   const routeLabel = routeLabels[normalizedPath] ?? title ?? 'Admin'
-  const contextMetrics = getContextMetrics({
-    path: normalizedPath,
-    pendingCount,
-    processedCount,
-    userCount,
-  })
-  const routeBadge = getPathBadge(normalizedPath)
-  const syncLabel = `Synced ${getTimestampLabel()}`
 
   const navItems = navSections.map((section) => ({
     ...section,
@@ -175,10 +107,6 @@ export function AdminShell({
     if (to === '/admin') return normalizedPath === '/admin'
     return normalizedPath.startsWith(to)
   }
-
-  const utilityContent = utility ?? (
-    <p className="text-xs text-[var(--muted-foreground)]">{syncLabel}</p>
-  )
 
   return (
     <div className="min-h-screen bg-[var(--background)]">
@@ -283,26 +211,9 @@ export function AdminShell({
             })}
           </div>
 
-          <div className="border-t border-[var(--border)] p-3">
-            <p className="px-1 pb-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--muted-foreground)]">
-              Entity legend
-            </p>
-            <div className="flex flex-wrap gap-2 px-1">
-              <EntityChip entity="SV" />
-              <EntityChip entity="LP" />
-            </div>
-          </div>
         </aside>
 
         <main className="min-w-0 flex-1">
-          <AdminContextBand
-            routeBadge={routeBadge}
-            routeLabel={routeLabel}
-            metrics={contextMetrics}
-            utility={utilityContent}
-            className="bg-[var(--background)]"
-          />
-
           <div
             className={`mx-auto w-full px-4 py-5 sm:px-8 ${wideCanvas ? 'max-w-[1280px]' : 'max-w-[1080px]'}`}
           >
